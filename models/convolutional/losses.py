@@ -10,7 +10,8 @@ accelerator = "cuda" if torch.cuda.is_available() else "cpu"
 def masked_psnr(pred, gt, mask):
     masked_pred = pred[~mask]
     masked_y = gt[~mask]
-    psnr = PeakSignalNoiseRatio().to(accelerator)
+    # psnr = PeakSignalNoiseRatio().to(accelerator)
+    psnr = PeakSignalNoiseRatio(data_range=(masked_y.max() - masked_y.min())).to(pred.device)
     #return calc_psnr(masked_pred, masked_y)
     return psnr(masked_pred, masked_y)
 

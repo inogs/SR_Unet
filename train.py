@@ -140,12 +140,24 @@ if __name__== "__main__":
     data_module = ICDataModule(
             train_path = train_path,
             test_path = test_path,
-            river_train_path = conf.river_train_path if riv else None,
+            #river_train_path = conf.river_train_path if riv else None,
             #river_test_path = conf.river_test_path if riv else None,
             batch_size = conf.training.batch_size
     )
 
     n_var = data_module.get_numchannels()
+
+    # terminate program
+    flag = True
+    # if flag==True terminate the program, otherwise it continues with the training
+
+    print(train_path)
+    print(test_path)
+
+    # if flag:
+    #     print("Ending execution")
+    #     exit(0)
+
 
     print(f"[training for dataset '{os.path.basename(train_path)}'] Starting execution")
     print(

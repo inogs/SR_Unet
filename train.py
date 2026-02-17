@@ -27,6 +27,35 @@ class obj(object):
 
 
 
+import os, time
+
+def _rss_gb_linux():
+    try:
+        with open("/proc/self/status", "r") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    kb = int(line.split()[1])
+                    return kb / (1024**2)
+    except Exception:
+        pass
+    return None
+
+def mem(tag=""):
+    rss_gb = _rss_gb_linux()
+    rss = f"{rss_gb:.2f}GB" if rss_gb is not None else "?"
+    try:
+        import torch
+        if torch.cuda.is_available():
+            d = torch.cuda.current_device()
+            ga = torch.cuda.memory_allocated(d) / (1024**3)
+            gr = torch.cuda.memory_reserved(d) / (1024**3)
+            gpu = f"GPU{d} alloc={ga:.2f}GB reserv={gr:.2f}GB"
+        else:
+            gpu = "CUDA=off"
+    except Exception as e:
+        gpu = f"CUDA=? ({type(e).__name__})"
+    print(f"[MEM] {time.strftime('%F %T')} {tag} :: RSS={rss} | {gpu}", flush=True)
+
 def train(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output_path:str, train_path:str, n_var=None, loss=None):
 
     if loss == None:
@@ -85,7 +114,7 @@ if __name__== "__main__":
         -net (str): can be 'srcnn', 'unet', 'unet_mcd'
         -r (bool, optional): to use if we want to include river data in the training
     """
-
+    mem("start of train.py")
     i = 1
     conf_path = None
     output_path = None
@@ -136,7 +165,7 @@ if __name__== "__main__":
         test_path = conf.var_test_path
     if not loss:
         loss = conf.training.loss
-
+    mem("preparing data module")
     data_module = ICDataModule(
             train_path = train_path,
             test_path = test_path,

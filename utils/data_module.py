@@ -11,6 +11,43 @@ torch.serialization.add_safe_globals(
     [torch.utils.data.dataset.TensorDataset]
 )
 
+import os, resource, torch
+
+import os, time
+
+def _rss_gb_linux():
+    try:
+        with open("/proc/self/status", "r") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    kb = int(line.split()[1])
+                    return kb / (1024**2)
+    except Exception:
+        pass
+    return None
+
+def mem(tag=""):
+    rss_gb = _rss_gb_linux()
+    rss = f"{rss_gb:.2f}GB" if rss_gb is not None else "?"
+    try:
+        import torch
+        if torch.cuda.is_available():
+            d = torch.cuda.current_device()
+            ga = torch.cuda.memory_allocated(d) / (1024**3)
+            gr = torch.cuda.memory_reserved(d) / (1024**3)
+            gpu = f"GPU{d} alloc={ga:.2f}GB reserv={gr:.2f}GB"
+        else:
+            gpu = "CUDA=off"
+    except Exception as e:
+        gpu = f"CUDA=? ({type(e).__name__})"
+    print(f"[MEM] {time.strftime('%F %T')} {tag} :: RSS={rss} | {gpu}", flush=True)
+
+def _print_mem(tag):
+    rss_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    print(f"[{tag}] pid={os.getpid()} CPU RSS: {rss_kb/(1024**2):.2f} GB")
+    if torch.cuda.is_available():
+        print(f"[{tag}] GPU alloc: {torch.cuda.memory_allocated()/1e9:.2f} GB | reserved: {torch.cuda.memory_reserved()/1e9:.2f} GB")
+
 
 def make_shape_even(image_tensor):
     '''
@@ -72,7 +109,11 @@ class ICDataModule(pl.LightningDataModule):
         # Assign Train/val split(s) for use in Dataloaders
         if stage == "fit":
             #load the dataset
-            tensor_ds = torch.load(self.train_path)
+            mem("before loading train dataset")
+            _print_mem("before torch.load train")
+            t0=time.time(); tensor_ds=torch.load(self.train_path); print("load_s", time.time()-t0)
+            _print_mem("after torch.load train")
+            mem("after loading train dataset")
             if self.river_train_path != None:
                 rivers_ds = torch.load(self.river_train_path)
             else:
@@ -102,7 +143,7 @@ class ICDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         return torch.utils.data.DataLoader(self.train_ds,
                                            batch_size=self.batch_size,
-                                           num_workers=4,
+                                           num_workers=8,
                                            pin_memory=True,
                                            shuffle = True
                                            )
@@ -110,13 +151,13 @@ class ICDataModule(pl.LightningDataModule):
     def val_dataloader(self):
         return torch.utils.data.DataLoader(self.val_ds,
                                            batch_size=self.batch_size,
-                                           num_workers=4,
+                                           num_workers=8,
                                            pin_memory=True,
                                            shuffle = False)
 
     def test_dataloader(self):
         return torch.utils.data.DataLoader(self.test_ds,
                                            batch_size=1,
-                                           num_workers=4,
+                                           num_workers=8,
                                            pin_memory=True,
                                            shuffle = False)

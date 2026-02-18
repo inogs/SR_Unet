@@ -95,7 +95,11 @@ def predict(prediction_dir, test_path, weight_file, data_path, var, riv):
     ds = np.array(ds)
 
     input_test = torch.tensor(ds[:, 0, :, :, :, :])
-    mask = torch.tensor(input_test > 1000000)
+
+    # MODIFICA -> non so se sia corretta
+    # mask = torch.tensor(input_test > 1000000)
+    mask = (input_test > 1000000)
+
 
     file_names = []
     for v in var:

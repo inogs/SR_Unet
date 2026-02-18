@@ -40,8 +40,8 @@ def train(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output
                     riv_net = riv_net,
                     loss = loss,
                     num_channels=n_var,
-                    riv_in_dim = conf.n_riv,
-                    riv_out_dim = reduce(lambda x, y: x * y, vars(conf.data_dim).values()),
+                    #riv_in_dim = conf.n_riv,
+                    #riv_out_dim = reduce(lambda x, y: x * y, vars(conf.data_dim).values()),
                     lr = conf.training.lr
             )
 
@@ -66,8 +66,10 @@ def train(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output
         dirpath=output_path,
         filename=best_filename
     )
-    trainer = pl.Trainer(detect_anomaly=True, accelerator=accelerator, strategy="ddp_find_unused_parameters_true", log_every_n_steps=20, max_epochs=conf.training.max_epochs, callbacks=[early_stop_callback, checkpoint_callback], logger=tb_logger, check_val_every_n_epoch=1)
 
+    # MODIFICA: detect_anomaly rallenta molto il training, se sai che il codice gira toglilo per vlocizzare
+    # trainer = pl.Trainer(detect_anomaly=True, accelerator=accelerator, strategy="ddp_find_unused_parameters_true", log_every_n_steps=20, max_epochs=conf.training.max_epochs, callbacks=[early_stop_callback, checkpoint_callback], logger=tb_logger, check_val_every_n_epoch=1)
+    trainer = pl.Trainer(detect_anomaly=False, accelerator=accelerator, strategy="ddp_find_unused_parameters_true", log_every_n_steps=20, max_epochs=conf.training.max_epochs, callbacks=[early_stop_callback, checkpoint_callback], logger=tb_logger, check_val_every_n_epoch=1)
 
     trainer.fit(model, datamodule=data_module)
 
@@ -131,8 +133,9 @@ if __name__== "__main__":
 
     if train_path == None:
         train_path = conf.var_train_path
-    #if test_path == None:
-    #    test_path = conf.var_test_path
+    # MODIFICA: tolgo i commenti alle seguenti due righe -> vado a scrivere in conf. il path per il test
+    if test_path == None:
+        test_path = conf.var_test_path
     if not loss:
         loss = conf.training.loss
 
@@ -149,7 +152,7 @@ if __name__== "__main__":
     print(f"[training for dataset '{os.path.basename(train_path)}'] Starting execution")
     print(
         f"[training for dataset '{os.path.basename(train_path)}'] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% \
-        \n[training for variable '{os.path.basename(train_path)}'] \t-- max_epochs = {conf.training.max_epochs}\
+        \n[training for variable '{os.path.basename(train_path)}'] \t-- max_epochs = {conf.training.max_epochs} \
         \n[training for variable '{os.path.basename(train_path)}'] \t-- model = {main_net} \
         \n[training for variable '{os.path.basename(train_path)}'] \t-- patience = {conf.training.patience} \
         \n[training for variable '{os.path.basename(train_path)}'] \t-- lr = {conf.training.lr} \

@@ -5,6 +5,12 @@ import torchvision.transforms as transforms
 from torch.utils.data.dataset import random_split
 from torch.utils.data import Dataset
 from typing import Optional
+import torch.utils.data
+
+torch.serialization.add_safe_globals(
+    [torch.utils.data.dataset.TensorDataset]
+)
+
 
 def make_shape_even(image_tensor):
     '''
@@ -86,7 +92,7 @@ class ICDataModule(pl.LightningDataModule):
                 rivers_ds = None
             self.test_ds = ICDataset(tensor_dataset=test_ds, rivers_dataset=rivers_ds, resize_to_even=self.resize_to_even)
 
-
+    # commento Anna: in teoria con get_numchannels carico di nuovo tutto il dataset (torch.load) in memoria -> basterebbe aggiungere mmap_mode = 'r'? o contare il numero di var quando si fanno i load dei dataset per training, o quando si costruisce i dataset
     def get_numchannels(self):
         test_dataset = torch.load(self.test_path)
         test_ds = ICDataset(tensor_dataset=test_dataset)

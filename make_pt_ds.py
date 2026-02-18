@@ -41,16 +41,16 @@ def get_xy_single_var(data_path:str, cms2ogs_map:Dict[str, str], cms_name: str, 
         for filename in cms_filenames:
 
             file_path = os.path.join(cms_path, filename)
-            file_ds = nc.Dataset(file_path)
-            x_list.append(file_ds[cms_name][:].data)
+            with nc.Dataset(file_path) as file_ds:   # <-- qui
+                x_list.append(file_ds[cms_name][:].data)
             bar()
 
     with alive_bar(len(ogs_filenames), title=f"Processing OGS {ds_type} data for {ogs_name}...") as bar:
         for filename in ogs_filenames:
 
             file_path: str = os.path.join(ogs_path, filename)
-            file_ds = nc.Dataset(file_path)
-            y_list.append(file_ds[ogs_name][:].data)
+            with nc.Dataset(file_path) as file_ds:   # <-- qui
+                y_list.append(file_ds[ogs_name][:].data)
             bar()
     return np.array(x_list), np.array(y_list)
 
@@ -59,7 +59,7 @@ def get_river_vector(data_path:str, is_test:bool):
     """data_path need to have inside a 'rivers' directory, with vector and vector_test
     subdirectory including files with normalized vectors of river data flow-rates
     """
-    river_path = os.path.join(data_path, "rivers", "vector_test" if is_test else "vector")
+    river_path = os.path.join(data_path, "rivers", "vector_test" if is_test else "vector")  # vector? non dovrebbe essere rivers_train
     x_list = []
 
     cms_filenames = sorted(os.listdir(river_path))
@@ -155,7 +155,7 @@ def make_var_dataset(data_path:str, var_list:List[str], cms2ogs_map:Dict[str, st
             cms_im_test.append(varx_list)
             ogs_im_test.append(vary_list)
         if stat:
-            with open(f'{data_path}/statistics/cms/stat_cms_{var}.txt', 'r') as file:
+            with open(f'{data_path}/statistics/cms/stat_cms_{var}.txt', 'r') as file: # directory with mean and standard deviations of the datasets
                 line_elements = []
                 for line in file:
                     if line.strip():
@@ -188,11 +188,21 @@ def make_var_dataset(data_path:str, var_list:List[str], cms2ogs_map:Dict[str, st
     x_test = np.array(cms_im_test)
     y_test = np.array(ogs_im_test)
 
-    mask = x_train[0] > 100000
+    if not test_only:
+        mask = x_train[0] > 100000
+    if not train_only:
+        mask = x_test[0] > 100000
 
     if not stat:
-        x_full = np.concatenate((x_train, x_test), axis=0)
-        y_full = np.concatenate((y_train, y_test), axis=0)
+        if not test_only and not train_only:  # entrambi i dataset
+                x_full = np.concatenate((x_train, x_test), axis=0)
+                y_full = np.concatenate((y_train, y_test), axis=0)
+        if not test_only:  # solo train
+            x_full = x_train
+            y_full = y_train
+        if not train_only:  # solo test
+            x_full = x_test
+            y_full = y_test
         x_means, x_stds = get_mean_std(x_full, mask)
         y_means, y_stds = get_mean_std(y_full, mask)
 

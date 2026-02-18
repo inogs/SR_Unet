@@ -10,7 +10,7 @@ accelerator = "cuda" if torch.cuda.is_available() else "cpu"
 def masked_psnr(pred, gt, mask):
     masked_pred = pred[~mask]
     masked_y = gt[~mask]
-    psnr = PeakSignalNoiseRatio().to(accelerator)
+    psnr = PeakSignalNoiseRatio(data_range=1.0).to(accelerator)
     #return calc_psnr(masked_pred, masked_y)
     return psnr(masked_pred, masked_y)
 
@@ -23,8 +23,11 @@ def masked_ssim(pred, gt, mask):
 def masked_rmse(pred, gt, mask, stat=None):
     if stat is None:
         stat = [0, 1]
-    masked_pred = (pred[~mask] * stat[1]) + stat[0]
-    masked_y = (gt[~mask] * stat[1]) + stat[0]
+    # MODIFICA: commentata la riga seguente e aggiunta quella sotto
+    # masked_pred = (pred[~mask] * stat[1]) + stat[0]
+    masked_pred = (pred[~mask] * stat[0, 1]) + stat[0, 0]
+    # MODIFICA: fatta la stessa modifica nella riga seguente
+    masked_y = (gt[~mask] * stat[0, 1]) + stat[0, 0]
     return torch.sqrt(torch.mean((masked_pred - masked_y) ** 2))
 
 #to try both as a penalty and by itself

@@ -3,6 +3,7 @@ from torch import nn
 import pytorch_lightning as pl
 from models.convolutional.losses import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse
 from models.convolutional.networks import UNet3D_MCD, RiverNet_MCD
+import numpy as np
 
 
 class ConvModel(pl.LightningModule):
@@ -12,6 +13,10 @@ class ConvModel(pl.LightningModule):
     '''
     def __init__(self, main_net, n_dimensions, riv_net = False, loss = 'rmse', num_channels=1, lr = 1e-3, stats = None):
         super(ConvModel, self).__init__()
+
+        # MODIFICA: AGGIUNTE LE DUE RIGHE SUCCESSIVE
+        self.stats = stats 
+        print("DEBUG stats:", self.stats, type(self.stats), np.shape(self.stats))
 
         self.save_hyperparameters()
         input_channels = num_channels + 1 if riv_net else num_channels
@@ -32,7 +37,8 @@ class ConvModel(pl.LightningModule):
         self.name = f"conv_model_{main_net}_{loss}"
         self.n_dimensions = n_dimensions
         self.lr = lr
-        self.stats = stats
+        # MODIFICA: commentata la riga successiva (togliere commento quando si toglie la modifica fatta sopra)
+        #self.stats = stats
 
     def forward(self, x, riv=None, riv_mask=None):
         x = self.main_net(x, riv)

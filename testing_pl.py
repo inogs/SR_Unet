@@ -41,8 +41,19 @@ def test(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output_
     model.eval()
 
     trainer = pl.Trainer()
+    
+    # MODIFICA
+    # trainer.test(model=model, datamodule=data_module, verbose=True)
+    results = trainer.test(model=model, datamodule=data_module, verbose=True)
 
-    trainer.test(model=model, datamodule=data_module, verbose=True)
+    # Salvataggio leggibile
+    output_file = os.path.join(output_path, "test_results.txt")
+    with open(output_file, "w") as f:
+        f.write("       Test metric             DataLoader 0\n")
+        f.write("────────────────────────────────────────────\n")
+        for key, value in results[0].items():
+            f.write(f"{key:<20} {value}\n")
+
 
 
 

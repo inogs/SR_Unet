@@ -1,0 +1,95 @@
+CONTROLLA IL TEMPO E LA MEM DI SRUN! 
+
+
+A. PREPROC
+
+    srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --gres=tmpfs:10g --gres=gpu:0 --partition=boost_usr_prod --pty bash -i
+    
+    OPPURE 
+    
+    srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --mem=100G --partition=boost_usr_prod --pty bash -i
+
+
+1A. INTERPOLATE: interpolate_cms
+
+    python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/interpolate_cms.py  \
+	  -ip /leonardo_work/OGS23_PRACE_IT_0/adelsavio/AdriaticNC  \
+	  -op /leonardo_work/OGS23_PRACE_IT_0/adelsavio/Adriatic_nc_out \
+	  -gp /leonardo/home/userexternal/adelsavi/dati_half_cadeau/1o64_deg_res/Chla/Chla_2007_062.nc \
+	  -vgp Chla \
+  -v chl
+
+
+2A. SPLIT TRAIN TEST: split_traintest
+    
+    python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/split_train_test.py \
+		-dp /leonardo_scratch/large/userexternal/adelsavi/Adriatic_nc_out \
+		-ts 0.9
+		
+    ts: test size
+
+
+B. MAKE PT DS: make_pt_ds
+
+  se gli passi file stat 
+  srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --gres=tmpfs:10g --gres=gpu:0 --partition=boost_usr_prod --pty bash -i
+
+  per file TRAIN se NON passi file stat
+  srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --mem=200G --partition=boost_usr_prod --pty bash -i
+  
+  	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds.py  \
+	  -dp /leonardo_scratch/large/userexternal/adelsavi \
+	  -v chl \
+    -train_only 
+
+  SOLO DEI DATASET RIVERS -> nel path in dp devo avere una cartella 'rivers', dentro la quale ci deve essere una cartella 'vector' con i file di train se metto la flag -train_only
+	path da avere in conf.json:    
+   "river_train_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_train.pt",
+   "river_test_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_test.pt",
+
+	  python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds.py \
+	  -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/ \
+	  -r \
+    -train_only 
+
+  SURFACE:
+	
+	 python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds.py  \
+	 -dp /leonardo_scratch/large/userexternal/adelsavi \
+	 -v chl \
+	 -train_only \ 
+   -s
+
+
+C. TRAIN (river?): train.py
+  
+  python /leonardo/home/userexternal/adelsavi/git/codice_fede/train.py \
+	-cp /leonardo/home/userexternal/adelsavi/git/codice_fede/models/convolutional/conf.json \
+	-op /leonardo_scratch/large/userexternal/adelsavi/weights \
+	-trp /leonardo_scratch/large/userexternal/adelsavi/chl_train_dataset.pt \
+	-loss 'rmse' \
+  -net unet
+
+
+D.  PREDICTION: produce_predictions.py
+	
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/produce_predictions.py \
+	-wf /leonardo_scratch/large/userexternal/adelsavi/weights/best_conv_model_unet_rmse_chl_train_dataset-v9.ckpt \
+	-dp /leonardo_scratch/large/userexternal/adelsavi \
+	-tep /leonardo_scratch/large/userexternal/adelsavi/chl_test_dataset.pt  \
+	-v chl \
+	-net unet \
+  -r
+
+E. TEST: testing_pl.py
+   
+  python /leonardo/home/userexternal/adelsavi/git/codice_fede/testing_pl.py \
+	-cp /leonardo/home/userexternal/adelsavi/git/codice_fede/models/convolutional/conf.json \
+	-op /leonardo_work/OGS23_PRACE_IT_0/adelsavio/ \
+	-tep /leonardo_scratch/large/userexternal/adelsavi/chl_test_dataset.pt \
+	-trp /leonardo_scratch/large/userexternal/adelsavi/chl_train_dataset.pt \
+	-wf /leonardo_scratch/large/userexternal/adelsavi/weights/best_conv_model_unet_rmse_chl_train_dataset-v9.ckpt \
+	-loss 'rmse' \
+	-net unet \
+	-stat /leonardo_work/OGS23_PRACE_IT_0/adelsavio/statistics/ogs \
+  -r 

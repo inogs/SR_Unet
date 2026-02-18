@@ -141,12 +141,20 @@ class ICDataModule(pl.LightningDataModule):
 
 
     def train_dataloader(self):
-        return torch.utils.data.DataLoader(self.train_ds,
-                                           batch_size=self.batch_size,
-                                           num_workers=8,
-                                           pin_memory=True,
-                                           shuffle = True
-                                           )
+        # return torch.utils.data.DataLoader(self.train_ds,
+        #                                    batch_size=self.batch_size,
+        #                                    num_workers=8,
+        #                                    pin_memory=True,
+        #                                    shuffle = True
+        #                                    )
+        return torch.utils.data.DataLoader(
+                                            self.train_ds,
+                                            batch_size=self.batch_size,
+                                            num_workers=16,
+                                            pin_memory=True,
+                                            shuffle=False,
+                                            persistent_workers=True,
+                                            )
 
     def val_dataloader(self):
         return torch.utils.data.DataLoader(self.val_ds,

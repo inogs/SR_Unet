@@ -10,7 +10,7 @@ A. PREPROC
     srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --mem=100G --partition=boost_usr_prod --pty bash -i
 
 
-1A. INTERPOLATE: interpolate_cms
+  1A. INTERPOLATE: interpolate_cms
 
     python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/interpolate_cms.py  \
 	  -ip /leonardo_work/OGS23_PRACE_IT_0/adelsavio/AdriaticNC  \
@@ -20,7 +20,7 @@ A. PREPROC
   -v chl
 
 
-2A. SPLIT TRAIN TEST: split_traintest
+  2A. SPLIT TRAIN TEST: split_traintest
     
     python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/split_train_test.py \
 		-dp /leonardo_scratch/large/userexternal/adelsavi/Adriatic_nc_out \

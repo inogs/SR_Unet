@@ -17,79 +17,111 @@ A. PREPROC
 	  -op /leonardo_work/OGS23_PRACE_IT_0/adelsavio/Adriatic_nc_out \
 	  -gp /leonardo/home/userexternal/adelsavi/dati_half_cadeau/1o64_deg_res/Chla/Chla_2007_062.nc \
 	  -vgp Chla \
-  -v chl
+      -v chl
 
 
   2A. SPLIT TRAIN TEST: split_traintest
     
     python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/split_train_test.py \
 		-dp /leonardo_scratch/large/userexternal/adelsavi/Adriatic_nc_out \
-		-ts 0.9
+		-ts 0.1
+
+    DATI SURFACE:
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/split_train_test.py -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio -ts 0.1 -s
 		
     ts: test size
 
 
 B. MAKE PT DS: make_pt_ds
 
-  se gli passi file stat 
+  CON flag -stat (gli passi tu i file txt con le statistiche)
   srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --gres=tmpfs:10g --gres=gpu:0 --partition=boost_usr_prod --pty bash -i
 
-  per file TRAIN se NON passi file stat
+  per file TRAIN SENZA flag -stat
   srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --mem=200G --partition=boost_usr_prod --pty bash -i
   
   	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds.py  \
-	  -dp /leonardo_scratch/large/userexternal/adelsavi \
+	  -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio \
 	  -v chl \
-    -train_only 
+      -train_only 
 
   SOLO DEI DATASET RIVERS -> nel path in dp devo avere una cartella 'rivers', dentro la quale ci deve essere una cartella 'vector' con i file di train se metto la flag -train_only
-	path da avere in conf.json:    
-   "river_train_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_train.pt",
-   "river_test_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_test.pt",
+  dentro la cartella 'rivers' comparirà il file pt river_train.pt
 
 	  python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds.py \
 	  -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/ \
 	  -r \
-    -train_only 
+      -train_only 
 
-  SURFACE:
+  SURFACE: 
 	
-	 python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds.py  \
-	 -dp /leonardo_scratch/large/userexternal/adelsavi \
-	 -v chl \
-	 -train_only \ 
-   -s
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds.py  \
+	-dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/surface \
+	-v chl \
+	-train_only 
+	 
+	 
 
 
-C. TRAIN (river?): train.py
-  
+C. TRAIN: train.py
+
+  path da avere in conf.json se flag -r:    
+   "river_train_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_train.pt",
+   "river_test_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_test.pt",
+
+   srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --gres=tmpfs:10g --gres=gpu:1 --partition=boost_usr_prod --pty bash -i
+
+
   python /leonardo/home/userexternal/adelsavi/git/codice_fede/train.py \
 	-cp /leonardo/home/userexternal/adelsavi/git/codice_fede/models/convolutional/conf.json \
-	-op /leonardo_scratch/large/userexternal/adelsavi/weights \
-	-trp /leonardo_scratch/large/userexternal/adelsavi/chl_train_dataset.pt \
+	-op /leonardo_work/OGS23_PRACE_IT_0/adelsavio/weights \
+	-trp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/chl_train_dataset.pt \
 	-loss 'rmse' \
-  -net unet
+	-net unet \
+	-r
+
+	SURFACE: --> NON FUNZIONA: INCONSISTENZA TRA DIM INPUT E ARCHITETTURA UNET
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/train.py \
+		-cp /leonardo/home/userexternal/adelsavi/git/codice_fede/models/convolutional/conf.json \
+		-op /leonardo_work/OGS23_PRACE_IT_0/adelsavio/surface/weights \
+		-trp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/surface/chl_train_dataset.pt \
+		-loss 'rmse' \
+		-net unet \
+		-r
+	
 
 
 D.  PREDICTION: produce_predictions.py
+	devo avere tutto nello stesso path -dp: cartellla ORIGINAL e SURFACE con dentro cartella PREDICTION + cartella DATI DI TEST (SI .nc,  NO .pt)
 	
+	GPU??
+
 	python /leonardo/home/userexternal/adelsavi/git/codice_fede/produce_predictions.py \
-	-wf /leonardo_scratch/large/userexternal/adelsavi/weights/best_conv_model_unet_rmse_chl_train_dataset-v9.ckpt \
-	-dp /leonardo_scratch/large/userexternal/adelsavi \
-	-tep /leonardo_scratch/large/userexternal/adelsavi/chl_test_dataset.pt  \
+	-wf /leonardo_work/OGS23_PRACE_IT_0/adelsavio/weights/best_conv_model_unet_rmse_chl_train_dataset-v6.ckpt \
+	-dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio \
+	-tep /leonardo_work/OGS23_PRACE_IT_0/adelsavio/chl_test_dataset.pt  \
 	-v chl \
 	-net unet \
-  -r
+    -r
 
 E. TEST: testing_pl.py
+   nella flag -stat devo mettere il path per la cartella ogs dentro a statistuics che contiene il file txt con le statistiche di train/test
    
-  python /leonardo/home/userexternal/adelsavi/git/codice_fede/testing_pl.py \
+   srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --gres=tmpfs:10g --gres=gpu:1 --partition=boost_usr_prod --pty bash -i
+
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/testing_pl.py \
 	-cp /leonardo/home/userexternal/adelsavi/git/codice_fede/models/convolutional/conf.json \
 	-op /leonardo_work/OGS23_PRACE_IT_0/adelsavio/ \
-	-tep /leonardo_scratch/large/userexternal/adelsavi/chl_test_dataset.pt \
-	-trp /leonardo_scratch/large/userexternal/adelsavi/chl_train_dataset.pt \
-	-wf /leonardo_scratch/large/userexternal/adelsavi/weights/best_conv_model_unet_rmse_chl_train_dataset-v9.ckpt \
+	-tep /leonardo_work/OGS23_PRACE_IT_0/adelsavio/chl_test_dataset.pt \
+	-trp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/chl_train_dataset.pt \
+	-wf /leonardo_work/OGS23_PRACE_IT_0/adelsavio/weights/best_conv_model_unet_rmse_chl_train_dataset-v6.ckpt \
 	-loss 'rmse' \
 	-net unet \
 	-stat /leonardo_work/OGS23_PRACE_IT_0/adelsavio/statistics/ogs \
-  -r 
+	-r 
+
+
+F. plot_map.py: path_file_.py varibile path_file_nc --> viene salvato come 'single_plot.png' nella cartella in cui mi trovo a far girare il codice
+	come salvarlo in locale del desktop: scp adelsavi@login.leonardo.cineca.it:/leonardo_work/OGS23_PRACE_IT_0/adelsavio/single_plot.png C:\Users\annad\OneDrive\Desktop\
+	
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/utils/plot_map.py chl /leonardo_work/OGS23_PRACE_IT_0/adelsavio/original/predictions/chl/chl_2017_005.nc

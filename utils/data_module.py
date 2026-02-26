@@ -150,7 +150,7 @@ class ICDataModule(pl.LightningDataModule):
         return torch.utils.data.DataLoader(
                                             self.train_ds,
                                             batch_size=self.batch_size,
-                                            num_workers=16,
+                                            num_workers=8,
                                             pin_memory=True,
                                             shuffle=False,
                                             persistent_workers=True,

@@ -98,7 +98,7 @@ def train(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output
     # trainer = pl.Trainer(detect_anomaly=False, accelerator=accelerator, strategy="ddp_find_unused_parameters_true", log_every_n_steps=20, max_epochs=conf.training.max_epochs, callbacks=[early_stop_callback, checkpoint_callback], logger=tb_logger, check_val_every_n_epoch=1)
     trainer = pl.Trainer(
         accelerator="gpu",
-        devices=1,
+        devices=4,
         strategy="ddp_find_unused_parameters_true",
         log_every_n_steps=20,
         max_epochs=conf.training.max_epochs,
@@ -178,8 +178,8 @@ if __name__== "__main__":
     data_module = ICDataModule(
             train_path = train_path,
             test_path = test_path,
-            #river_train_path = conf.river_train_path if riv else None,
-            #river_test_path = conf.river_test_path if riv else None,
+            river_train_path = conf.river_train_path if riv else None,
+            river_test_path = conf.river_test_path if riv else None,
             batch_size = conf.training.batch_size
     )
 

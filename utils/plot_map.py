@@ -13,13 +13,21 @@ def plot_netcdf(file, var_name):
     dataset = nc.Dataset(file, 'r')
 
     # Extract the variable data
-    var_data = dataset.variables[var_name][:]
+    # MODIFICA
+    # var_data = dataset.variables[var_name][:]
+    var_data = dataset.variables[var_name][:].filled(np.nan)  # riempi i masked con NaN
 
     # Extract the coordinate data
     lon = dataset.variables['longitude'][:]
     lat = dataset.variables['latitude'][:]
-    vmin = 0
-    vmax = 0.3
+
+    # MODIFCIA: commento queste due righe e aggiungo quelle sotto
+    # vmin = 0
+    # vmax = 0.3
+    vmin = var_data.min()
+    vmax = var_data.max()
+
+
 
     # Plot the data
     im = ax.pcolormesh(lon, lat, var_data[0, :, :], cmap=cmocean.cm.dense, vmin=vmin, vmax=vmax)

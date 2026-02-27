@@ -33,14 +33,14 @@ class UNet3D_MCD(nn.Module):
         self.pool4 = nn.MaxPool3d(kernel_size=2, stride=2)
         self.drop4 = nn.Dropout(p=0.2)
 
-        self.e51 = nn.Conv3d(512, 1024, kernel_size=3, padding='same')  # output: 2 x 17 x 31
-        self.e52 = nn.Conv3d(1024, 1024, kernel_size=3, padding='same')
+        # self.e51 = nn.Conv3d(512, 1024, kernel_size=3, padding='same')  # output: 2 x 17 x 31
+        # self.e52 = nn.Conv3d(1024, 1024, kernel_size=3, padding='same')
 
         # Decoder
-        self.upconv1 = nn.ConvTranspose3d(1024, 512, kernel_size=2, stride=2)
-        self.drop_up1 = nn.Dropout(p=0.2)
-        self.d11 = nn.Conv3d(1024, 512, kernel_size=3, padding='same')
-        self.d12 = nn.Conv3d(512, 512, kernel_size=3, padding='same')  # output: 4 x 38 x 62
+        # self.upconv1 = nn.ConvTranspose3d(1024, 512, kernel_size=2, stride=2)
+        # self.drop_up1 = nn.Dropout(p=0.2)
+        # self.d11 = nn.Conv3d(1024, 512, kernel_size=3, padding='same')
+        # self.d12 = nn.Conv3d(512, 512, kernel_size=3, padding='same')  # output: 4 x 38 x 62
 
         self.upconv2 = nn.ConvTranspose3d(512, 256, kernel_size=2, stride=2)  # output: 8 x 76 x 124
         self.drop_up2 = nn.Dropout(p=0.2)
@@ -112,7 +112,7 @@ class RiverNet_MCD(nn.Module):
         self.initial_hidden_size = 30
 
         # Calculate the size increase step
-        hidden_size_step = 10
+        hidden_size_step = 10 # serve eventualmente ad aumentare la dimensione dei hidden layer successivi rispetto al precedente -> che non succede perchè qui num_layer = 2
 
         # Define the layers
         self.layers = nn.ModuleList()

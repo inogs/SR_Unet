@@ -8,6 +8,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 import json
 import os
 from functools import reduce
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator 
 
 from utils.data_module import ICDataModule
 from models.convolutional.conv_model import ConvModel
@@ -16,6 +18,75 @@ pl.seed_everything(0, workers=True)
 
 accelerator = "cuda" if torch.cuda.is_available() else "cpu"
 device = torch.device(accelerator)
+
+#MODIFCIA -> agiunto class MetricsLogger per tenere traccia della val e train loss attraverso le epoche
+
+class MetricsLogger(pl.Callback):
+    def __init__(self):
+        super().__init__()
+        self.train_losses = []
+        self.val_losses = []
+        self.val_psnr = []
+
+    def on_train_epoch_end(self, trainer, pl_module):
+        epoch = trainer.current_epoch
+
+        metrics = trainer.callback_metrics
+        # print(metrics.keys())
+        train_loss = metrics.get('train_loss')
+        if train_loss is not None:
+            self.train_losses.append(train_loss.item())
+            print(f"Epoch {epoch}: train loss = {train_loss:.4f}")
+        else:
+            self.train_losses.append(float('nan'))
+
+
+    def on_validation_epoch_end(self, trainer, pl_module):
+        epoch = trainer.current_epoch
+
+        metrics = trainer.callback_metrics
+        # print(metrics.keys())
+        val_loss = metrics.get('val_loss')
+        val_psnr = metrics.get('val_psnr')
+        if val_loss is not None:
+            self.val_losses.append(val_loss.item())
+        else:
+            self.val_losses.append(float('nan'))
+        
+        if val_psnr is not None:
+            val_psnr = val_psnr.item()
+            self.val_psnr.append(val_psnr)
+        else:
+            val_psnr = float('nan')
+            self.val_psnr.append(val_psnr)
+        
+        print(f"Epoch {epoch}: val loss = {val_loss:.4f}, psnr = {val_psnr:.4f}")
+
+        
+
+
+    
+    def plot(self):
+        # Rimuovi il primo valore di val_loss se serve 
+
+        if len(self.val_losses) > len(self.train_losses):
+            self.val_losses = self.val_losses[1:]
+
+        epochs = range(1, len(self.train_losses)+1)
+        plt.figure(figsize=(10,5))
+        plt.plot(epochs, self.train_losses, label='Train Loss')
+        plt.plot(epochs, self.val_losses, label='Validation Loss')
+        plt.xlabel("Epochs")
+        plt.ylabel("Value")
+        plt.title("Validation and Training Loss trends during Epochs")
+        plt.legend()
+        plt.grid(True)
+        ax = plt.gca()  
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True)) # asse x con valori interi 
+        plt.savefig("loss_plot.png")
+        plt.close()
+
+
 
 class obj(object):
     def __init__(self, d):
@@ -67,11 +138,19 @@ def train(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output
         filename=best_filename
     )
 
+    # MODIFICA
+    metrics_logger = MetricsLogger()
+
+
     # MODIFICA: detect_anomaly rallenta molto il training, se sai che il codice gira toglilo per vlocizzare
     # trainer = pl.Trainer(detect_anomaly=True, accelerator=accelerator, strategy="ddp_find_unused_parameters_true", log_every_n_steps=20, max_epochs=conf.training.max_epochs, callbacks=[early_stop_callback, checkpoint_callback], logger=tb_logger, check_val_every_n_epoch=1)
-    trainer = pl.Trainer(detect_anomaly=False, accelerator=accelerator, strategy="ddp_find_unused_parameters_true", log_every_n_steps=20, max_epochs=conf.training.max_epochs, callbacks=[early_stop_callback, checkpoint_callback], logger=tb_logger, check_val_every_n_epoch=1)
+    trainer = pl.Trainer(detect_anomaly=True, accelerator=accelerator, strategy="ddp_find_unused_parameters_true", log_every_n_steps=20, max_epochs=conf.training.max_epochs, callbacks=[early_stop_callback, checkpoint_callback, metrics_logger], logger=tb_logger, check_val_every_n_epoch=1)
 
     trainer.fit(model, datamodule=data_module)
+
+    #MODIFICA
+    # genera grafico delle metriche
+    metrics_logger.plot()
 
 
 

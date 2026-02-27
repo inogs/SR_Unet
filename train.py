@@ -11,6 +11,7 @@ from functools import reduce
 
 from utils.data_module import ICDataModule
 from models.convolutional.conv_model import ConvModel
+torch.autograd.graph.set_warn_on_accumulate_grad_stream_mismatch(False)
 
 pl.seed_everything(0, workers=True)
 
@@ -100,13 +101,13 @@ def train(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output
         accelerator="gpu",
         precision="bf16-mixed",
         devices=4,
-        strategy="ddp_find_unused_parameters_true",
+        strategy="ddp",
         log_every_n_steps=20,
         max_epochs=conf.training.max_epochs,
         callbacks=[early_stop_callback, checkpoint_callback],
         logger=tb_logger,
         check_val_every_n_epoch=1,
-        accumulate_grad_batches=2
+        accumulate_grad_batches=4
     )
 
     trainer.fit(model, datamodule=data_module)

@@ -9,9 +9,9 @@
     "training" : {
         "loss" : "mse",
         "lr" : 1e-3,
-        "max_epochs" : 1,
+        "max_epochs" : 3,
         "patience": 10,
-        "batch_size" : 4
+        "batch_size" : 2
     },
     "data_dim" : {
         "height" : 300,

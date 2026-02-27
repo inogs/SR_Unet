@@ -15,8 +15,8 @@ class ConvModel(pl.LightningModule):
         super(ConvModel, self).__init__()
 
         # MODIFICA: AGGIUNTE LE DUE RIGHE SUCCESSIVE
-        self.stats = stats 
-        print("DEBUG stats:", self.stats, type(self.stats), np.shape(self.stats))
+        # self.stats = stats 
+        # print("DEBUG stats:", self.stats, type(self.stats), np.shape(self.stats))
 
         self.save_hyperparameters()
         input_channels = num_channels + 1 if riv_net else num_channels
@@ -37,8 +37,7 @@ class ConvModel(pl.LightningModule):
         self.name = f"conv_model_{main_net}_{loss}"
         self.n_dimensions = n_dimensions
         self.lr = lr
-        # MODIFICA: commentata la riga successiva (togliere commento quando si toglie la modifica fatta sopra)
-        #self.stats = stats
+        self.stats = stats
 
     def forward(self, x, riv=None, riv_mask=None):
         x = self.main_net(x, riv)
@@ -64,9 +63,16 @@ class ConvModel(pl.LightningModule):
             pred = self.forward(x, riv, riv_mask)
         else:
             pred = self.forward(x)
-
+        
+        # MODIFICA 
         loss = self.loss(pred, y, mask)
-        self.log('train_loss', loss)
+
+        self.log('train_loss', loss, 
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar=True,
+                 sync_dist=True) # Quando usi DDP: Sincronizza questa metrica tra tutti i processi GPU prima di loggarla
+
         return loss
 
     def validation_step(self, val_batch, batch_idx):
@@ -86,8 +92,19 @@ class ConvModel(pl.LightningModule):
 
         loss = self.loss(pred, y, mask)
         psnr_score = masked_psnr(pred, y, mask)
-        self.log('val_loss', loss, sync_dist=True)
-        self.log('val_psnr', psnr_score, sync_dist=True)
+        
+        #MODIFICA
+        self.log('val_loss', loss,
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar=True,
+                 sync_dist=True)
+        self.log('val_psnr', psnr_score,
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar =True,
+                 sync_dist=True)
+        
 
 
     def test_step(self, test_batch, batch_idx):

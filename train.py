@@ -98,7 +98,7 @@ def train(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output
     # trainer = pl.Trainer(detect_anomaly=False, accelerator=accelerator, strategy="ddp_find_unused_parameters_true", log_every_n_steps=20, max_epochs=conf.training.max_epochs, callbacks=[early_stop_callback, checkpoint_callback], logger=tb_logger, check_val_every_n_epoch=1)
     trainer = pl.Trainer(
         accelerator="gpu",
-        precision="16-mixed", #aggiunta
+        precision="bf16-mixed",
         devices=4,
         strategy="ddp_find_unused_parameters_true",
         log_every_n_steps=20,
@@ -106,6 +106,7 @@ def train(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output
         callbacks=[early_stop_callback, checkpoint_callback],
         logger=tb_logger,
         check_val_every_n_epoch=1,
+        accumulate_grad_batches=2
     )
 
     trainer.fit(model, datamodule=data_module)

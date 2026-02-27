@@ -60,7 +60,11 @@ class ConvModel(pl.LightningModule):
             pred = self.forward(x)
 
         loss = self.loss(pred, y, mask)
-        self.log('train_loss', loss)
+        self.log('train_loss', loss, 
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            sync_dist=True) # Quando usi DDP: Sincronizza questa metrica tra tutti i processi GPU prima di loggarla
         return loss
 
     def validation_step(self, val_batch, batch_idx):
@@ -80,9 +84,17 @@ class ConvModel(pl.LightningModule):
 
         loss = self.loss(pred, y, mask)
         psnr_score = masked_psnr(pred, y, mask)
-        self.log('val_loss', loss, sync_dist=True)
-        self.log('val_psnr', psnr_score, sync_dist=True)
-
+        #MODIFICA
+        self.log('val_loss', loss,
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar=True,
+                 sync_dist=True)
+        self.log('val_psnr', psnr_score,
+                 on_step=False,
+                 on_epoch=True,
+                 prog_bar =True,
+                 sync_dist=True)
 
     def test_step(self, test_batch, batch_idx):
 

@@ -64,7 +64,14 @@ class MetricsLogger(pl.Callback):
         print(f"Epoch {epoch}: val loss = {val_loss:.4f}, psnr = {val_psnr:.4f}")
 
         
-
+    # # method to print to file:
+    # # val loss
+    # # train loss
+    # # epoch number
+    # # psnr
+    # def log_to_file(self, epoch, train_loss, val_loss, val_psnr):
+    #     with open("training_log.txt", "a") as f:
+    #         f.write(f"Epoch {epoch}: train loss = {train_loss:.4f}, val loss = {val_loss:.4f}, psnr = {val_psnr:.4f}\n")
 
     
     def plot(self):
@@ -151,12 +158,12 @@ def train(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output
 
     tb_logger = loggers.TensorBoardLogger(save_dir="./")
 
-    early_stop_callback = EarlyStopping(
-        monitor="val_loss",
-        min_delta=0.00,
-        patience=conf.training.patience,
-        verbose=False,
-        mode="min")
+    # early_stop_callback = EarlyStopping(
+    #     monitor="val_loss",
+    #     min_delta=0.00,
+    #     patience=conf.training.patience,
+    #     verbose=False,
+    #     mode="min")
 
     checkpoint_callback = ModelCheckpoint(
         monitor='val_loss',
@@ -178,12 +185,13 @@ def train(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output
         strategy="ddp",
         log_every_n_steps=20,
         max_epochs=conf.training.max_epochs,
-        callbacks=[early_stop_callback, checkpoint_callback, metrics_logger],
+        callbacks=[checkpoint_callback, metrics_logger],
         logger=tb_logger,
-        check_val_every_n_epoch=1,
-        accumulate_grad_batches=4
+        check_val_every_n_epoch=1
+        # accumulate_grad_batches=1
     )
 
+    # trainer.fit(model, datamodule=data_module,ckpt_path="/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/weights.dir/best_conv_model_unet_rmse_chl_train_dataset-v1.ckpt")
     trainer.fit(model, datamodule=data_module)
 
     #MODIFICA
@@ -278,7 +286,8 @@ if __name__== "__main__":
     #     print("Ending execution")
     #     exit(0)
 
-
+    # put a timer here to check the time taken by the training
+    t0 = time.time()
     print(f"[training for dataset '{os.path.basename(train_path)}'] Starting execution")
     print(
         f"[training for dataset '{os.path.basename(train_path)}'] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% \
@@ -293,3 +302,5 @@ if __name__== "__main__":
     )
     train(data_module=data_module, main_net=main_net, riv_net=riv, conf=conf, output_path=output_path, train_path=train_path, n_var=n_var, loss=loss)
     print(f"[training for variable '{os.path.basename(train_path)}'] Ending execution")
+    t1 = time.time()
+    print(f"[training for variable '{os.path.basename(train_path)}'] Total time taken: {t1-t0:.2f} seconds")

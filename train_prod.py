@@ -1,29 +1,36 @@
-import pytorch_lightning as pl
+# local imports
+from utils.data_module import ICDataModule
+from models.convolutional.conv_model import ConvModel
+
+# basic imports
+import json
+import os
+import time
 import sys
 import argparse
 from pathlib import Path
+from functools import reduce
+
+# torch and lightning imports
 import torch
+import pytorch_lightning as pl
 from pytorch_lightning import loggers
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.nn.parallel import DistributedDataParallel as DDP
-import json
-import os
-import time
-from functools import reduce
+from lightning_fabric.utilities.rank_zero import rank_zero_only
+
+# from functools import reduce
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator 
 
-from utils.data_module import ICDataModule
-from models.convolutional.conv_model import ConvModel
+# torch and pl lightning settings
 torch.autograd.graph.set_warn_on_accumulate_grad_stream_mismatch(False)
-
 pl.seed_everything(0, workers=True)
 
+# accelerator and device settings
 accelerator = "cuda" if torch.cuda.is_available() else "cpu"
 device = torch.device(accelerator)
-
-from lightning_fabric.utilities.rank_zero import rank_zero_only
 
 @rank_zero_only
 def rprint(*args, **kwargs):
@@ -179,7 +186,8 @@ def train(data_module:ICDataModule,conf:obj):
     trainer = pl.Trainer(
         accelerator="gpu",
         # precision="bf16-mixed",
-        precision="32-true",
+        # precision="32-true",
+        precision=conf.training.precision, # possible values: "32-true", "16-mixed", "bf16-mixed"
         devices=conf.n_gpus,
         strategy="ddp",
         log_every_n_steps=20,
@@ -187,7 +195,7 @@ def train(data_module:ICDataModule,conf:obj):
         callbacks=[checkpoint_callback, metrics_logger],
         logger=tb_logger,
         check_val_every_n_epoch=1,
-        accumulate_grad_batches=conf.training.accumulate_grad_batches
+        accumulate_grad_batches=conf.training.accumulate_grad_batches # possible values: 1, 2, 4, 8, ... (effective batch size = batch_size * accumulate_grad_batches * n_gpus)
     )
 
     trainer.fit(model, datamodule=data_module)
@@ -235,6 +243,7 @@ if __name__== "__main__":
     rprint("training loss:", conf.training.loss)
     rprint("training learning rate:", conf.training.lr)
     rprint("training max_epochs:", conf.training.max_epochs)
+    rprint("training precision:", conf.training.precision)
     rprint("training patience:", conf.training.patience)
     rprint("training batch size (from input):", conf.training.batch_size)
     rprint("training accumulate_grad_batches (from input):", conf.training.accumulate_grad_batches)

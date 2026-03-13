@@ -110,24 +110,26 @@ if __name__ == '__main__':
 
     var_list = list(cms2ogs_map.keys())
 
-    folder_3D = "original"
-    folder_surface = "surface"
-
-    cms_path_3D = os.path.join(data_path, folder_3D, "nc_iCMS")
-    ogs_path_3D = os.path.join(data_path, folder_3D, "nc_OGS")
-    cms_test_path_3D = os.path.join(data_path, folder_3D, "nc_iCMS_test")
-    ogs_test_path_3D = os.path.join(data_path, folder_3D, "nc_OGS_test")
-    cms_path_surface = os.path.join(data_path, folder_surface, "iCMS_nc")
-    ogs_path_surface = os.path.join(data_path, folder_surface, "NARF_nc")
-    cms_test_path_surface = os.path.join(data_path, folder_surface, "nc_iCMS_test")
-    ogs_test_path_surface = os.path.join(data_path, folder_surface, "nc_OGS_test")
+    # folder_3D = "original"
+    # folder_surface = "surface"
+    
+    
+    cms_path_3D = os.path.join(data_path, "iCMS_nc")
+    ogs_path_3D = os.path.join(data_path, "NARF_nc")
+    cms_test_path_3D = os.path.join(data_path,"nc_iCMS_val")
+    ogs_test_path_3D = os.path.join(data_path, "nc_OGS_val")
+    # cms_path_surface = os.path.join(data_path, folder_surface, "iCMS_nc")
+    # ogs_path_surface = os.path.join(data_path, folder_surface, "NARF_nc")
+    # cms_test_path_surface = os.path.join(data_path, folder_surfaorce, "nc_iCMS_test")
+    # ogs_test_path_surface = os.path.join(data_path, folder_surface, "nc_OGS_test")
 
 
     percentage_to_move = float(test_size)
 
     # Get files to move for for one of the biogeochemical variables
     #files_to_move = get_random_files(cms_path_3D, percentage_to_move, var_list[0])
-    reference_path = cms_path_surface if surface_only else cms_path_3D
+    #MODIFICA TOLGO CASO SURFACE
+    reference_path = cms_path_3D
     files_to_move = get_random_files(reference_path, percentage_to_move, var_list[0])
 
     print(f"[split_test_train with test size {test_size}] Starting execution")
@@ -159,10 +161,10 @@ if __name__ == '__main__':
                 move_files(files_to_move, source_dir_ogs, dest_dir_ogs, cms2ogs_map[var], False, bar)
 
             # Splitting surface data
-            source_dir_cms = os.path.join(cms_path_surface, var)
-            source_dir_ogs = os.path.join(ogs_path_surface, cms2ogs_map[var])
-            dest_dir_cms = os.path.join(cms_test_path_surface, var)
-            dest_dir_ogs = os.path.join(ogs_test_path_surface, cms2ogs_map[var])
+            # source_dir_cms = os.path.join(cms_path_surface, var)
+            # source_dir_ogs = os.path.join(ogs_path_surface, cms2ogs_map[var])
+            # dest_dir_cms = os.path.join(cms_test_path_surface, var)
+            # dest_dir_ogs = os.path.join(ogs_test_path_surface, cms2ogs_map[var])
 
             move_files(files_to_move, source_dir_cms, dest_dir_cms, var, True, bar)
             move_files(files_to_move, source_dir_ogs, dest_dir_ogs, cms2ogs_map[var], False, bar)

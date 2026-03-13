@@ -14,9 +14,9 @@ def get_avg_std(var:str, data_type:str, data_path:str, cms2ogs_map:dict[str, str
             cms2ogs_map: json file with name conversion
     '''
     if data_type == "cms":
-        path = os.path.join(data_path, "iCMS_nc", var)
+        path = os.path.join(data_path, "iCMS_nc", var) # SOLO TRAIN COPERNICUS
     else:
-        path = os.path.join(data_path, "NARF_nc", cms2ogs_map[var])
+        path = os.path.join(data_path, "NARF_nc", cms2ogs_map[var]) # SOLO TRAIN OGS (cadeau)
 
     l = []
     for filename in os.listdir(path):

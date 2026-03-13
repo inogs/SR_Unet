@@ -31,19 +31,43 @@ A. PREPROC
 		
     ts: test size
 
+	3A. CALCOLO DI MEDIE E DEVIAZIONI STANDARD: compute_avgstd.py 
+
+	(da fare solo sul dataset di train, quello a cui si è già tolto il Validation set --> infatti la normalizzazione va fatta sui dati train, val e test ma usando sempre e solo i dati di train --> per ora nello script del produce_predictions si usano i file .txt delle statistiche per denormalizzare l'output) compute_avgstd.py
+     -in path di input che deve avere le due cartelle con i dataset di train ogs e cms 
+	 -out path di output che deve avere la cartella statistics (con dentro la cartella 'ogs' e 'cms' dove verranno salvati i file txt) e il file cms2ogs.json
+	 lo fa automaticamente per tutte le variabili
+
+	 python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/compute_avgstd.py -in /leonardo_work/OGS23_PRACE_IT_0/adelsavio -out /leonardo_work/OGS23_PRACE_IT_0/adelsavio
+
+
 
 B. MAKE PT DS: make_pt_ds
 
-  CON flag -stat (gli passi tu i file txt con le statistiche)
+  CON flag -stat (gli passi tu i file txt con le statistiche) e sempre per test e val
   srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --gres=tmpfs:10g --gres=gpu:0 --partition=boost_usr_prod --pty bash -i
 
   per file TRAIN SENZA flag -stat
-  srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --mem=200G --partition=boost_usr_prod --pty bash -i
+  srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --mem=200G --gres=gpu:0 --partition=boost_usr_prod --pty bash -i
   
-  	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds.py  \
+  1. creo file .pt sono del train:
+  	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds_anna.py  \
 	  -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio \
 	  -v chl \
       -train_only 
+
+  2. creo file .pt solo test
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds_anna.py  \
+	  -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio \
+	  -v chl \
+      -test_only 
+
+  3. creo file .pt solo validation
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds_anna.py  \
+	  -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio \
+	  -v chl \
+      -test_only 
+	  -val 
 
   SOLO DEI DATASET RIVERS -> nel path in dp devo avere una cartella 'rivers', dentro la quale ci deve essere una cartella 'vector' con i file di train se metto la flag -train_only
   dentro la cartella 'rivers' comparirà il file pt river_train.pt
@@ -52,15 +76,6 @@ B. MAKE PT DS: make_pt_ds
 	  -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/ \
 	  -r \
       -train_only 
-
-  SURFACE: 
-	
-	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds.py  \
-	-dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/surface \
-	-v chl \
-	-train_only 
-	 
-	 
 
 
 C. TRAIN: train.py
@@ -94,7 +109,7 @@ C. TRAIN: train.py
 D.  PREDICTION: produce_predictions.py
 	devo avere tutto nello stesso path -dp: cartellla ORIGINAL e SURFACE con dentro cartella PREDICTION + cartella DATI DI TEST (SI .nc,  NO .pt)
 	
-	GPU??
+	srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --gres=tmpfs:10g --gres=gpu:1 --partition=boost_usr_prod --pty bash -i
 
 	python /leonardo/home/userexternal/adelsavi/git/codice_fede/produce_predictions.py \
 	-wf /leonardo_work/OGS23_PRACE_IT_0/adelsavio/weights/best_conv_model_unet_rmse_chl_train_dataset-v6.ckpt \
@@ -125,3 +140,11 @@ F. plot_map.py: path_file_.py varibile path_file_nc --> viene salvato come 'sing
 	come salvarlo in locale del desktop: scp adelsavi@login.leonardo.cineca.it:/leonardo_work/OGS23_PRACE_IT_0/adelsavio/single_plot.png C:\Users\annad\OneDrive\Desktop\
 	
 	python /leonardo/home/userexternal/adelsavi/git/codice_fede/utils/plot_map.py chl /leonardo_work/OGS23_PRACE_IT_0/adelsavio/original/predictions/chl/chl_2017_005.nc
+
+
+G. plot_map_anna: plotta 1 riga il file target (cadeau) che gli passi cper primo, var con nomenclatura copernicus/pred, 2 riga plotta file pred, -abs opzionale se lo metti plotta la differenza ass tra i due file NetCDF 
+	salva con 'comparison_plot.png' nel path dove fai girare il codice 
+
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/utils/plot_map_anna.py chl /leonardo_work/OGS23_PRACE_IT_0/adelsavio/original/nc_OGS_test/Chla/Chla_2012_014.nc /leonardo_work/OGS23_PRACE_IT_0/adelsavio/original/predictions/chl/chl_2012_014.nc -abs
+
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/utils/plot_map_anna.py chl /leonardo_work/OGS23_PRACE_IT_0/adelsavio/original/nc_OGS_test/Chla/Chla_2012_014.nc /leonardo_work/OGS23_PRACE_IT_0/adelsavio/bs_32/original/predictions/chl/chl_2012_014.nc -abs

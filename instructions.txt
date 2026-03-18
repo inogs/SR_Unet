@@ -7,7 +7,7 @@ A. PREPROC
     
     OPPURE 
     
-    srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --mem=100G --partition=boost_usr_prod --pty bash -i
+    srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --mem=100G --gres=gpu:0 --partition=boost_usr_prod --pty bash -i
 
 
   1A. INTERPOLATE: interpolate_cms
@@ -20,16 +20,18 @@ A. PREPROC
       -v chl
 
 
-  2A. SPLIT TRAIN TEST: split_traintest
+  2A. SPLIT TRAIN TEST: split_train_test
+      ts: test size
+	  val: opzionale, se messa vuol dire che splitti il validation dal train
+	  il codice automaticamente splitta anche il dataset di river -> con la flag -val crea anche il dataset validation per i river
     
     python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/split_train_test.py \
-		-dp /leonardo_scratch/large/userexternal/adelsavi/Adriatic_nc_out \
+		-dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/ \
 		-ts 0.1
+		(-val)
 
-    DATI SURFACE:
-	python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/split_train_test.py -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio -ts 0.1 -s
 		
-    ts: test size
+    
 
 	3A. CALCOLO DI MEDIE E DEVIAZIONI STANDARD: compute_avgstd.py 
 
@@ -50,7 +52,7 @@ B. MAKE PT DS: make_pt_ds
   per file TRAIN SENZA flag -stat
   srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --mem=200G --gres=gpu:0 --partition=boost_usr_prod --pty bash -i
   
-  1. creo file .pt sono del train:
+  1. creo file .pt solo del train:
   	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds_anna.py  \
 	  -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio \
 	  -v chl \
@@ -83,6 +85,9 @@ C. TRAIN: train.py
   path da avere in conf.json se flag -r:    
    "river_train_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_train.pt",
    "river_test_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_test.pt",
+   "river_val_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_val.pt",
+
+   salva in automatico un plot della validation e train loss nella cartella in cui faccio girare il codice 
 
    srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --gres=tmpfs:10g --gres=gpu:1 --partition=boost_usr_prod --pty bash -i
 
@@ -91,18 +96,11 @@ C. TRAIN: train.py
 	-cp /leonardo/home/userexternal/adelsavi/git/codice_fede/models/convolutional/conf.json \
 	-op /leonardo_work/OGS23_PRACE_IT_0/adelsavio/weights \
 	-trp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/chl_train_dataset.pt \
+	-vp  /leonardo_work/OGS23_PRACE_IT_0/adelsavio/chl_val_dataset.pt \
 	-loss 'rmse' \
 	-net unet \
 	-r
 
-	SURFACE: --> NON FUNZIONA: INCONSISTENZA TRA DIM INPUT E ARCHITETTURA UNET
-	python /leonardo/home/userexternal/adelsavi/git/codice_fede/train.py \
-		-cp /leonardo/home/userexternal/adelsavi/git/codice_fede/models/convolutional/conf.json \
-		-op /leonardo_work/OGS23_PRACE_IT_0/adelsavio/surface/weights \
-		-trp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/surface/chl_train_dataset.pt \
-		-loss 'rmse' \
-		-net unet \
-		-r
 	
 
 

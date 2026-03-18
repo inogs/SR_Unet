@@ -78,7 +78,27 @@ def get_xy_single_var(data_path:str, cms2ogs_map:Dict[str, str], cms_name: str, 
             with nc.Dataset(file_path) as file_ds:   # <-- qui
                 y_list.append(file_ds[ogs_name][:].data)
             bar()
+
+    # MODIFICA QUI per debug
+    # x_arr = np.array(x_list)
+    # y_arr = np.array(y_list)
+    # x_arr e y_arr sono np.array mascherati
+    # valid = x_arr[x_arr <= 1e7]   # tutti i valori realistici
+    # valid2 = y_arr[y_arr <= 1e7] 
+    # print(f"[DEBUG] CMS min/max (valid values only): {valid.min()} / {valid.max()}")
+
+    # print(f"[DEBUG] CMS dtype: {valid.dtype} shape: {valid.shape}")
+    # print(f"[DEBUG] CMS min/max (masked-aware): {valid.min()} / {valid.max()}")
+    # print(f"[DEBUG] CMS min/max (valid values only): {valid.min()} / {valid.max()}")
+
+
+    # print(f"[DEBUG] OGS dtype: {valid2.dtype} shape: {valid2.shape}")
+    # print(f"[DEBUG] OGS min/max (masked-aware): {valid2.min()} / {valid2.max()}")
+    # print(f"[DEBUG] OGS min/max (valid values only): {valid2.min()} / {valid2.max()}")
+
+
     return np.array(x_list), np.array(y_list)
+
 
     # with alive_bar(len(cms_filenames), title=f"Processing CMS {ds_type} data for {cms_name}...") as bar:
     #     for filename in cms_filenames:
@@ -118,16 +138,28 @@ def get_xy_single_var(data_path:str, cms2ogs_map:Dict[str, str], cms_name: str, 
 
 
 
-def get_river_vector(data_path:str, is_test:bool):
+def get_river_vector(data_path:str, is_test:bool, val:bool):
     """data_path need to have inside a 'rivers' directory, with vector and vector_test
     subdirectory including files with normalized vectors of river data flow-rates
     """
-    river_path = os.path.join(data_path, "rivers", "vector_test" if is_test else "vector")
+
+    if val:
+        river_path = os.path.join(data_path, "rivers", "vector_val")
+    elif is_test:
+        river_path = os.path.join(data_path, "rivers", "vector_test")
+    else:
+        river_path = os.path.join(data_path, "rivers", "rivers_train")
     x_list = []
 
-    cms_filenames = sorted(os.listdir(river_path))
+    cms_filenames = natsort.natsorted(os.listdir(river_path))
+  
 
-    ds_type = "test" if is_test else "train"
+    if val:
+        ds_type = "validation"
+    elif is_test:
+        ds_type = "test"
+    else:
+        ds_type = "train"
 
     with alive_bar(len(cms_filenames), title=f"Processing river {ds_type} data ...") as bar:
         for filename in cms_filenames:
@@ -138,22 +170,49 @@ def get_river_vector(data_path:str, is_test:bool):
     return np.array(x_list)
 
 
-def make_rivers_dataset(data_path:str, train_only: bool = False, test_only:bool = False):
+def make_rivers_dataset(data_path:str, train_only: bool = False, test_only:bool = False, val:bool = False):
     """Construct river training and test torch dataset.
     """
+    do_val = test_only and val 
 
-    if not test_only:
-        rivers_train = get_river_vector(data_path, is_test=False)
+    
+    if not train_only: # quindi: voglio test/val
+        if do_val: #faccio val
+            rivers_val = get_river_vector(data_path, is_test=False, val = True)
+            rivers_val_save_path = os.path.join(data_path, "rivers", "rivers_val.pt")
+            print("Saving the pytorch validation river datasets...")
+            torch.save(torch.Tensor(rivers_val), rivers_val_save_path)
+            print("Saved!")
+            print("Val shape:", rivers_val.shape)
+            print("NaN presenti:", np.isnan(rivers_val).any())
+            print("Inf presenti:", np.isinf(rivers_val).any())
+
+            
+        else: #faccio test
+            rivers_test = get_river_vector(data_path, is_test=True, val = False)
+            rivers_test_save_path = os.path.join(data_path, "rivers", "rivers_test.pt")
+            print("Saving the pytorch test river datasets...")
+            torch.save(torch.Tensor(rivers_test), rivers_test_save_path)
+            print("Saved!")
+            print("Test shape:", rivers_test.shape)
+            print("NaN presenti:", np.isnan(rivers_test).any())
+            print("Inf presenti:", np.isinf(rivers_test).any())
+
+
+
+    if not test_only: # quindi faccio train
+        rivers_train = get_river_vector(data_path, is_test=False, val = False)
         rivers_train_save_path = os.path.join(data_path, "rivers", "rivers_train.pt")
         print("Saving the pytorch river datasets...")
         torch.save(torch.Tensor(rivers_train), rivers_train_save_path)
         print("Saved!")
-    if not train_only:
-        rivers_test = get_river_vector(data_path, is_test=True)
-        rivers_test_save_path = os.path.join(data_path, "rivers", "rivers_test.pt")
-        print("Saving the pytorch river datasets...")
-        torch.save(torch.Tensor(rivers_test), rivers_test_save_path)
-        print("Saved!")
+        print("Train shape:", rivers_train.shape)
+        print("NaN presenti:", np.isnan(rivers_train).any())
+        print("Inf presenti:", np.isinf(rivers_train).any())
+
+
+
+
 
 
 def get_mean_std(ds:np.array, mask:np.array):
@@ -171,19 +230,29 @@ def get_mean_std(ds:np.array, mask:np.array):
 def normalize(ds:np.array, means:np.array, stds:np.array, mask:np.array):
     """Compute normalization of the dataset, given its mean
        and standard deviation.
+       MASK: array booleano della stessa forma spaziale di un singolo campione, che indica quali elementi devono essere ignorati nella normalizzazione.
+       Le posizioni mascherate vengono infine riempite con 1e7 per indicare valori “inutilizzabili”.
     """
-    mask = np.repeat(mask, ds.shape[0], axis=0)
-    ds = np.ma.masked_array(ds, mask)
+    mask = np.repeat(mask, ds.shape[0], axis=0) # Qui la maschera originale, che copre solo le dimensioni spaziali di un singolo campione, viene ripetuta lungo l’asse dei campioni, in modo che corrisponda alla forma completa di ds.
+    ds = np.ma.masked_array(ds, mask) # crea un array mascherato, dove tutti gli elementi dove mask=True vengono ignorati nelle operazioni matematiche.
     normalized_ds = np.zeros_like(ds, dtype=np.float32)
     # NOTA: questi due cicli for probabilmente potrebbero essere sostituiti con qualocsa di più efficiente
     for i in range(ds.shape[0]):  # Iterate over each data sample
         for v in range(ds.shape[1]):  # Iterate over each channel
             if ds.ndim == 4:  # Check if the image is 2D or 3D
-                normalized_ds[i, v, :, :] = np.ma.masked_invalid((ds[i, v, :, :] - means[v]) / stds[v]).filled(1e7)
+                normalized_ds[i, v, :, :] = np.ma.masked_invalid((ds[i, v, :, :] - means[v]) / stds[v]).filled(1e7) # .masked_invalid maschera eventuali valori NaN o inf risultanti dalla divisione, sostituendoli con con 1e7
             else:
                 normalized_ds[i, v, :, :, :] = np.ma.masked_invalid((ds[i, v, :, :, :] - means[v]) / stds[v]).filled(1e7)
 
+    # # MODIFICA QUI PER DEBUG
+    # print("\n[DEBUG normalize] dtype:", ds.dtype)
+    # print("[DEBUG normalize] min/max:", ds.min(), ds.max())
+    # print("[DEBUG normalize] std min:", np.min(stds))
+
+
     return normalized_ds.data
+
+
 
 
 
@@ -225,8 +294,7 @@ def make_var_dataset(data_path:str, var_list:List[str], cms2ogs_map:Dict[str, st
     y_stds = []
 
     # Determina se stiamo facendo validation
-    do_val = test_only and val  # Se true: facciamo "validation" come test_only
-
+    do_val = test_only and val  # Se true: facciamo "validation" ma senza aggiungere una parte del codice per validation, semplicemnte usando la parte del codice dedicata a test_only ma per il validation 
 
     for var in var_list:
         # 1. Prendi train SEMPRE (per costruire train o per stats o per mask) -> assunzione: mask viene preso sempre e solo da train per evitare che durante il train la rete veda qualsiasi info del dataset di test anche se tecnicamnete le maschere sono le stessa
@@ -315,7 +383,7 @@ def make_var_dataset(data_path:str, var_list:List[str], cms2ogs_map:Dict[str, st
         x_train = normalize(x_train, x_means, x_stds, mask)
         y_train = normalize(y_train, y_means, y_stds, mask)
         train_torch_ds = TensorDataset(torch.Tensor(x_train), torch.Tensor(y_train))
-    if not train_only:
+    if not train_only: # qui normalizzo test o validation -> perchè validation viene "inserito" negli oggetti test
         x_test = normalize(x_test, x_means, x_stds, mask)
         y_test = normalize(y_test, y_means, y_stds, mask)
         test_torch_ds = TensorDataset(torch.Tensor(x_test), torch.Tensor(y_test))
@@ -334,6 +402,7 @@ def make_var_dataset(data_path:str, var_list:List[str], cms2ogs_map:Dict[str, st
         train_save_path = os.path.join(dest_path, name + "train_dataset.pt")
         print(f"Saving the  {ds_type} pytorch datasets...")
         torch.save(train_torch_ds, train_save_path)
+
         print("Saved!")
     if not train_only:
         # metti un if qui per cambiare il nome al file .pt di uscita se abbiamo validation -> aggiungi solo la flag
@@ -372,8 +441,7 @@ if __name__== "__main__":
         -v (list): list of variables that we want to put inside THE SAME dataset file.
 
         -r (bool, optional): to use for the construction of river dataset
-
-        -s (bool, optional): to use if want to compute dataset for surface only
+        
 
     """
     i = 1
@@ -435,6 +503,8 @@ if __name__== "__main__":
     if var_list != []:
         make_var_dataset(data_path, var_list, cms2ogs_map, read_stat, train_only, test_only, val)
     if rivers:
-        make_rivers_dataset(data_path, train_only, test_only)
+        make_rivers_dataset(data_path, train_only, test_only, val)
     print(f"[make_dataset for variable {var_list}] Ending execution")
+
+
     

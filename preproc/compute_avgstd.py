@@ -14,9 +14,9 @@ def get_avg_std(var:str, data_type:str, data_path:str, cms2ogs_map:dict[str, str
             cms2ogs_map: json file with name conversion
     '''
     if data_type == "cms":
-        path = os.path.join(data_path, "iCMS_nc", var) # SOLO TRAIN COPERNICUS
+        path = os.path.join(data_path, "iCMS_nc", var) # SOLO TRAIN COPERNICUS nel momento in cui ho già splittao train e validation (train senza validation ha sempre il nome iCMS_nc)
     else:
-        path = os.path.join(data_path, "NARF_nc", cms2ogs_map[var]) # SOLO TRAIN OGS (cadeau)
+        path = os.path.join(data_path, "NARF_nc", cms2ogs_map[var]) # SOLO TRAIN OGS (cadeau) (stesso discorso di sopra)
 
     l = []
     for filename in os.listdir(path):
@@ -28,6 +28,8 @@ def get_avg_std(var:str, data_type:str, data_path:str, cms2ogs_map:dict[str, str
             l.append(file_ds[cms2ogs_map[var]][:])
 
     l1 = ma.concatenate(l)
+    print(f"[INFO] Shape dopo concatenazione: {l1.shape}")
+    print(f"[INFO] Numero totale elementi: {l1.size}")
     avg = np.average(l1)
     std = np.std(l1)
     print("avg", avg)

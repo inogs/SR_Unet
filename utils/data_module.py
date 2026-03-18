@@ -59,29 +59,49 @@ class ICDataset(Dataset):
 
 class ICDataModule(pl.LightningDataModule):
 
-    def __init__(self, train_path:str, test_path:str, river_train_path:Optional[str]=None, river_test_path:Optional[str]=None, batch_size:int=32, resize_to_even:bool=False):
+    def __init__(self, train_path:str, test_path:str, val_path:str, river_train_path:Optional[str]=None, river_test_path:Optional[str]=None, river_val_path:Optional[str]=None, batch_size:int=32, resize_to_even:bool=False):
         super(ICDataModule, self).__init__()
         self.train_path=train_path
         self.test_path=test_path
+        self.val_path=val_path
         self.river_train_path=river_train_path
         self.river_test_path=river_test_path
+        self.river_val_path=river_val_path
         self.batch_size=batch_size
         self.resize_to_even = resize_to_even
-
+     
+    # setup è il cuore della gestione dei dataset:
     def setup(self, stage:str):
         # Assign Train/val split(s) for use in Dataloaders
         if stage == "fit":
             #load the dataset
-            tensor_ds = torch.load(self.train_path)
-            if self.river_train_path != None:
-                rivers_ds = torch.load(self.river_train_path)
+            train_ds = torch.load(self.train_path)
+            val_ds = torch.load(self.val_path)
+            if self.river_train_path is not None:
+                rivers_train_ds = torch.load(self.river_train_path)
             else:
-                rivers_ds= None
-            ds = ICDataset(tensor_dataset=tensor_ds, rivers_dataset=rivers_ds, resize_to_even=self.resize_to_even)
+                rivers_train_ds = None
+
+            if self.river_val_path is not None:
+                rivers_val_ds = torch.load(self.river_val_path)
+            else:
+                rivers_val_ds = None
+
+            #  ds = ICDataset(tensor_dataset=tensor_ds, rivers_dataset=rivers_ds, resize_to_even=self.resize_to_even)
+
+            # MODIFICA -> GLI PASSO IO IL VALIDATION SET
             #split in train and validation sets
-            train_size = int(0.9 * len(tensor_ds))
-            val_size = len(tensor_ds) - train_size
-            self.train_ds, self.val_ds = random_split(ds, [train_size, val_size])
+            # train_size = int(0.9 * len(tensor_ds))
+            # val_size = len(tensor_ds) - train_size
+            # self.train_ds, self.val_ds = random_split(ds, [train_size, val_size])
+
+            self.train_ds = ICDataset(train_ds, rivers_train_ds, resize_to_even=self.resize_to_even)
+            self.val_ds   = ICDataset(val_ds, rivers_val_ds, resize_to_even=self.resize_to_even)
+            # x, y = self.train_ds[0]
+            # xv, yv = self.val_ds[0]
+            # print(x.shape, xv.shape)
+
+
 
         # Assign Test split(s) for use in Dataloaders
         if stage == "test":
@@ -104,7 +124,7 @@ class ICDataModule(pl.LightningDataModule):
                                            batch_size=self.batch_size,
                                            num_workers=4,
                                            pin_memory=True,
-                                           shuffle = True
+                                           shuffle = True # mescola i batch ogni epoca
                                            )
 
     def val_dataloader(self):

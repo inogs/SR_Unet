@@ -125,9 +125,9 @@ def train(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output
 
     early_stop_callback = EarlyStopping(
         monitor="val_loss",
-        min_delta=0.00,
+        min_delta=0.00, # qualsiasi miglioramento maggiore di 0 è considerato un miglioramento.
         patience=conf.training.patience,
-        verbose=False,
+        verbose=False, 
         mode="min")
 
     checkpoint_callback = ModelCheckpoint(
@@ -162,6 +162,7 @@ if __name__== "__main__":
         to use for the learning (num of epochs, patience...)
         -op (str): output path to save weights of the network
         -trp (str): path to the training dataset
+        -vp (str): path to the validation dataset
         -loss (str): loss function, can be 'mse', 'rmse', 'perceptual'
         -net (str): can be 'srcnn', 'unet', 'unet_mcd'
         -r (bool, optional): to use if we want to include river data in the training
@@ -174,6 +175,7 @@ if __name__== "__main__":
     riv = False
     loss = None
     train_path = None
+    val_path = None
     test_path = None
     n_var = None
 
@@ -188,6 +190,9 @@ if __name__== "__main__":
             i += 2
         elif sys.argv[i] == "-trp":
             train_path = sys.argv[i+1]
+            i += 2
+        elif sys.argv[i] == "-vp":
+            val_path = sys.argv[i+1]
             i += 2
         elif sys.argv[i] == "-loss":
             loss = sys.argv[i+1]
@@ -212,6 +217,9 @@ if __name__== "__main__":
 
     if train_path == None:
         train_path = conf.var_train_path
+    if val_path == None:
+        val_path = conf.var_val_path
+
     # MODIFICA: tolgo i commenti alle seguenti due righe -> vado a scrivere in conf. il path per il test
     if test_path == None:
         test_path = conf.var_test_path
@@ -221,7 +229,9 @@ if __name__== "__main__":
     data_module = ICDataModule(
             train_path = train_path,
             test_path = test_path,
+            val_path = val_path,
             river_train_path = conf.river_train_path if riv else None,
+            river_val_path = conf.river_val_path if riv else None,
             #river_test_path = conf.river_test_path if riv else None,
             batch_size = conf.training.batch_size
     )

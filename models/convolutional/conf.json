@@ -2,15 +2,17 @@
     "n_var" : 1,
     "n_riv" : 19,
     "var_train_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/chl_train_dataset.pt",
+    "var_val_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/chl_val_dataset.pt",
     "var_test_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/chl_test_dataset.pt",
     "river_train_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_train.pt",
+    "river_val_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_val.pt",
     "river_test_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_test.pt",
     "seed" : 0,
     "training" : {
         "loss" : "mse",
         "lr" : 1e-3,
         "max_epochs" : 2,
-        "patience": 10,
+        "patience": 30,
         "batch_size" : 4
     },
     "data_dim" : {

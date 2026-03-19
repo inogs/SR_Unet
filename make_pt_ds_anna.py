@@ -82,7 +82,7 @@ def get_xy_single_var(data_path:str, cms2ogs_map:Dict[str, str], cms_name: str, 
     # MODIFICA QUI per debug
     # x_arr = np.array(x_list)
     # y_arr = np.array(y_list)
-    # x_arr e y_arr sono np.array mascherati
+    #     # x_arr e y_arr sono np.array mascherati
     # valid = x_arr[x_arr <= 1e7]   # tutti i valori realistici
     # valid2 = y_arr[y_arr <= 1e7] 
     # print(f"[DEBUG] CMS min/max (valid values only): {valid.min()} / {valid.max()}")
@@ -170,7 +170,7 @@ def get_river_vector(data_path:str, is_test:bool, val:bool):
     return np.array(x_list)
 
 
-def make_rivers_dataset(data_path:str, train_only: bool = False, test_only:bool = False, val:bool = False):
+def make_rivers_dataset(data_path:str, save_path:str, train_only: bool = False, test_only:bool = False, val:bool = False):
     """Construct river training and test torch dataset.
     """
     do_val = test_only and val 
@@ -179,8 +179,10 @@ def make_rivers_dataset(data_path:str, train_only: bool = False, test_only:bool 
     if not train_only: # quindi: voglio test/val
         if do_val: #faccio val
             rivers_val = get_river_vector(data_path, is_test=False, val = True)
-            rivers_val_save_path = os.path.join(data_path, "rivers", "rivers_val.pt")
-            print("Saving the pytorch validation river datasets...")
+            # rivers_val_save_path = os.path.join(data_path, "rivers", "rivers_val.pt")
+            rivers_val_save_path = os.path.join(save_path, "rivers_val.pt")
+            print(f"Saving the pytorch validation river datasets in {save_path}")
+            # os.makedirs(save_path, exist_ok=True) 
             torch.save(torch.Tensor(rivers_val), rivers_val_save_path)
             print("Saved!")
             print("Val shape:", rivers_val.shape)
@@ -190,8 +192,10 @@ def make_rivers_dataset(data_path:str, train_only: bool = False, test_only:bool 
             
         else: #faccio test
             rivers_test = get_river_vector(data_path, is_test=True, val = False)
-            rivers_test_save_path = os.path.join(data_path, "rivers", "rivers_test.pt")
-            print("Saving the pytorch test river datasets...")
+            # rivers_test_save_path = os.path.join(data_path, "rivers", "rivers_test.pt")
+            rivers_test_save_path = os.path.join(save_path,"rivers_test.pt")
+            print(f"Saving the pytorch test river datasets in {save_path}")
+            # os.makedirs(save_path, exist_ok=True)
             torch.save(torch.Tensor(rivers_test), rivers_test_save_path)
             print("Saved!")
             print("Test shape:", rivers_test.shape)
@@ -202,8 +206,10 @@ def make_rivers_dataset(data_path:str, train_only: bool = False, test_only:bool 
 
     if not test_only: # quindi faccio train
         rivers_train = get_river_vector(data_path, is_test=False, val = False)
-        rivers_train_save_path = os.path.join(data_path, "rivers", "rivers_train.pt")
-        print("Saving the pytorch river datasets...")
+        # rivers_train_save_path = os.path.join(data_path, "rivers", "rivers_train.pt")
+        rivers_train_save_path = os.path.join(save_path, "rivers_train.pt")
+        print(f"Saving the pytorch river datasets in {save_path}")
+        # os.makedirs(save_path, exist_ok=True)
         torch.save(torch.Tensor(rivers_train), rivers_train_save_path)
         print("Saved!")
         print("Train shape:", rivers_train.shape)
@@ -260,7 +266,7 @@ def normalize(ds:np.array, means:np.array, stds:np.array, mask:np.array):
 
 
 
-def make_var_dataset(data_path:str, var_list:List[str], cms2ogs_map:Dict[str, str], stat:bool = True, train_only: bool = False, test_only:bool = False, val:bool = False):
+def make_var_dataset(data_path:str, save_path: str, var_list:List[str], cms2ogs_map:Dict[str, str], stat:bool = True, train_only: bool = False, test_only:bool = False, val:bool = False):
     '''
         Saves the Pytorch dataset corresponding to a set of given variables in the data folder.
 
@@ -396,21 +402,21 @@ def make_var_dataset(data_path:str, var_list:List[str], cms2ogs_map:Dict[str, st
         for var in var_list:
             name = name + f"{var}_"
 
-    dest_path = data_path #os.path.join(data_path, "surface" if is_surface else "original")
 
     if not test_only:
-        train_save_path = os.path.join(dest_path, name + "train_dataset.pt")
-        print(f"Saving the  {ds_type} pytorch datasets...")
+        train_save_path = os.path.join(save_path, name + "train_dataset.pt")
+        print(f"Saving the  {ds_type} pytorch datasets in {save_path}")
+        # os.makedirs(save_path, exist_ok=True)
         torch.save(train_torch_ds, train_save_path)
-
         print("Saved!")
     if not train_only:
         # metti un if qui per cambiare il nome al file .pt di uscita se abbiamo validation -> aggiungi solo la flag
         if val:
-            test_save_path =  os.path.join(dest_path, name + "val_dataset.pt")
+            test_save_path =  os.path.join(save_path, name + "val_dataset.pt")
         else: 
-            test_save_path =  os.path.join(dest_path, name + "test_dataset.pt")
-        print(f"Saving the {ds_type} pytorch datasets...")
+            test_save_path =  os.path.join(save_path, name + "test_dataset.pt")
+        print(f"Saving the {ds_type} pytorch datasets in {save_path}")
+        # os.makedirs(save_path, exist_ok=True)
         torch.save(test_torch_ds, test_save_path)
         print("Saved!")
 
@@ -430,10 +436,8 @@ if __name__== "__main__":
     """Script to construct the training and the test dataset
     (after that test and training data have already been divided).
     Inputs:
-        -dp (str): data path for training and test. Inside the directory there must be
-        directories original (if we want to process 3D data) and/ or surface (for the
-        processing of surface only data).
-
+        -dp (str): data path for training and test. 
+        -op (str): output path, where we want to save the output
         -stat (bool, optional): flag denoting the presence inside the data path of a
         directory with mean and variance of each variable, both for Copernicus and OGS
         dataset (cfr compute_avgstd.py)
@@ -447,6 +451,7 @@ if __name__== "__main__":
     i = 1
     var_list = []
     data_path = None
+    save_path = None
     rivers = False
     read_stat = False
     train_only = False
@@ -455,8 +460,13 @@ if __name__== "__main__":
 
     while i < len(sys.argv):
         if sys.argv[i] == "-dp":
-            if data_path != None: raise ValueError("Repeated input for data path")
+            if data_path != None: raise ValueError("Repeated input for -dp: data path")
+            if i+1 >= len(sys.argv): raise ValueError("Missing value for -dp: data path")
             data_path = sys.argv[i+1]; i+= 2
+        elif sys.argv[i] == "-op":
+            if save_path != None: raise ValueError("Repeated input for -op: output path")
+            if i+1 >= len(sys.argv): raise ValueError("Missing value for -op: output path")
+            save_path = sys.argv[i+1]; i+= 2
         elif sys.argv[i] == "-stat": # To use if we saved means and stds on files
             if read_stat: raise ValueError("Repeated input for stat")
             else:
@@ -501,9 +511,9 @@ if __name__== "__main__":
 
     print(f"[make_dataset for variables {var_list}] Starting execution")
     if var_list != []:
-        make_var_dataset(data_path, var_list, cms2ogs_map, read_stat, train_only, test_only, val)
+        make_var_dataset(data_path, save_path, var_list, cms2ogs_map, read_stat, train_only, test_only, val)
     if rivers:
-        make_rivers_dataset(data_path, train_only, test_only, val)
+        make_rivers_dataset(data_path, save_path, train_only, test_only, val)
     print(f"[make_dataset for variable {var_list}] Ending execution")
 
 

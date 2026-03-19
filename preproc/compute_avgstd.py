@@ -45,6 +45,7 @@ if __name__ == '__main__':
     i = 1
     data_path_input = None
     data_path_output = None
+    map_path = None # dir del dizionario che mappa nome variabili csm e ogs
 
     while i < len(sys.argv):
         if sys.argv[i] == "-in":
@@ -57,6 +58,11 @@ if __name__ == '__main__':
                 raise ValueError("Repeated input for data path")
             data_path_output = sys.argv[i+1]
             i += 2
+        elif sys.argv[i] == "-map":
+            if map_path is not None:
+                raise ValueError("Repeated path for map")
+            map_path = sys.argv[i+1]
+            i += 2
         else:
             i += 1
 
@@ -66,11 +72,16 @@ if __name__ == '__main__':
         raise TypeError("Missing value for output data path")
 
 
-    map_path = os.path.join(data_path_output, "cms2ogs.json")
+    # map_path = os.path.join(map_var_path, "cms2ogs.json")
     stat_path = os.path.join(data_path_output, "statistics")
 
-    if not os.path.exists(stat_path):
-        os.makedirs(stat_path)
+    # Dopo aver ottenuto map_path da sys.argv
+    if os.path.isdir(map_path):
+        # Se è una cartella, aggiungi il nome del file
+        map_path = os.path.join(map_path, "cms2ogs.json")
+
+    if not os.path.isfile(map_path):
+        raise FileNotFoundError(f"Il file JSON della mappa non esiste: {map_path}")
 
     with open(map_path, 'r') as f:
         cms2ogs_map = json.load(f)

@@ -75,20 +75,22 @@ def get_river_vector(data_path:str, is_test:bool):
     return np.array(x_list)
 
 
-def make_rivers_dataset(data_path:str, train_only: bool = False, test_only:bool = False):
+def make_rivers_dataset(data_path:str, save_path:str, train_only: bool = False, test_only:bool = False):
     """Construct river training and test torch dataset.
     """
 
     if not test_only:
         rivers_train = get_river_vector(data_path, is_test=False)
-        rivers_train_save_path = os.path.join(data_path, "rivers", "rivers_train.pt")
-        print("Saving the pytorch river datasets...")
+        rivers_train_save_path = os.path.join(save_path,"rivers_train.pt")
+        # rivers_train_save_path = os.path.join(data_path, "rivers", "rivers_train.pt")
+        print(f"Saving the pytorch river datasets in {save_path}")
         torch.save(torch.Tensor(rivers_train), rivers_train_save_path)
         print("Saved!")
     if not train_only:
         rivers_test = get_river_vector(data_path, is_test=True)
-        rivers_test_save_path = os.path.join(data_path, "rivers", "rivers_test.pt")
-        print("Saving the pytorch river datasets...")
+        rivers_test_save_path = os.path.join(save_path, "rivers_test.pt")
+        # rivers_test_save_path = os.path.join(data_path, "rivers", "rivers_test.pt")
+        print(f"Saving the pytorch river datasets in {save_path}")
         torch.save(torch.Tensor(rivers_test), rivers_test_save_path)
         print("Saved!")
 
@@ -122,7 +124,7 @@ def normalize(ds:np.array, means:np.array, stds:np.array, mask:np.array):
     return normalized_ds.data
 
 
-def make_var_dataset(data_path:str, var_list:List[str], cms2ogs_map:Dict[str, str], stat:bool = True, train_only: bool = False, test_only:bool = False):
+def make_var_dataset(data_path:str, save_path:str, var_list:List[str], cms2ogs_map:Dict[str, str], stat:bool = True, train_only: bool = False, test_only:bool = False):
     '''
         Saves the Pytorch dataset corresponding to a set of given variables in the data folder.
 
@@ -222,16 +224,16 @@ def make_var_dataset(data_path:str, var_list:List[str], cms2ogs_map:Dict[str, st
         for var in var_list:
             name = name + f"{var}_"
 
-    dest_path = data_path #os.path.join(data_path, "surface" if is_surface else "original")
+
 
     if not test_only:
-        train_save_path = os.path.join(dest_path, name + "train_dataset.pt")
-        print("Saving the pytorch datasets...")
+        train_save_path = os.path.join(save_path, name + "train_dataset.pt")
+        print(f"Saving the pytorch datasets in {save_path}")
         torch.save(train_torch_ds, train_save_path)
         print("Saved!")
     if not train_only:
-        test_save_path =  os.path.join(dest_path, name + "test_dataset.pt")
-        print("Saving the pytorch datasets...")
+        test_save_path =  os.path.join(save_path, name + "test_dataset.pt")
+        print(f"Saving the pytorch datasets in {save_path}")
         torch.save(test_torch_ds, test_save_path)
         print("Saved!")
 
@@ -254,6 +256,7 @@ if __name__== "__main__":
         -dp (str): data path for training and test. Inside the directory there must be
         directories original (if we want to process 3D data) and/ or surface (for the
         processing of surface only data).
+        -op output path
 
         -stat (bool, optional): flag denoting the presence inside the data path of a
         directory with mean and variance of each variable, both for Copernicus and OGS
@@ -269,6 +272,7 @@ if __name__== "__main__":
     i = 1
     var_list = []
     data_path = None
+    save_path = None
     rivers = False
     read_stat = False
     train_only = False
@@ -277,7 +281,12 @@ if __name__== "__main__":
     while i < len(sys.argv):
         if sys.argv[i] == "-dp":
             if data_path != None: raise ValueError("Repeated input for data path")
+            if i+1 >= len(sys.argv): raise ValueError("Missing value for -dp: data input path")
             data_path = sys.argv[i+1]; i+= 2
+        elif sys.argv[i] == "-op":
+            if save_path != None: raise ValueError("Repeated input for output path")
+            if i+1 >= len(sys.argv): raise ValueError("Missing value for -op: output path")
+            save_path = sys.argv[i+1]; i+= 2
         elif sys.argv[i] == "-stat": # To use if we saved means and stds on files
             if read_stat: raise ValueError("Repeated input for stat")
             else:
@@ -320,8 +329,8 @@ if __name__== "__main__":
 
     print(f"[make_dataset for variables {var_list}] Starting execution")
     if var_list != []:
-        make_var_dataset(data_path, var_list, cms2ogs_map, read_stat, train_only, test_only)
+        make_var_dataset(data_path, save_path, var_list, cms2ogs_map, read_stat, train_only, test_only)
     if rivers:
-        make_rivers_dataset(data_path, train_only, test_only)
+        make_rivers_dataset(data_path, save_path, train_only, test_only)
     print(f"[make_dataset for variable {var_list}] Ending execution")
     

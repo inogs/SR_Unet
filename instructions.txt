@@ -31,20 +31,25 @@ A. PREPROC
 		(-val)
 
 		
-    
 
 	3A. CALCOLO DI MEDIE E DEVIAZIONI STANDARD: compute_avgstd.py 
+	
+	srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --mem=200G --gres=gpu:0 --partition=boost_usr_prod --pty bash -i
 
 	(da fare solo sul dataset di train, quello a cui si è già tolto il Validation set --> infatti la normalizzazione va fatta sui dati train, val e test ma usando sempre e solo i dati di train --> per ora nello script del produce_predictions si usano i file .txt delle statistiche per denormalizzare l'output) compute_avgstd.py
      -in path di input che deve avere le due cartelle con i dataset di train ogs e cms 
-	 -out path di output che deve avere la cartella statistics (con dentro la cartella 'ogs' e 'cms' dove verranno salvati i file txt) e il file cms2ogs.json
+	 -out path di output in cui verranno create le artelle ogs e cms
 	 lo fa automaticamente per tutte le variabili
+	 -map path dove c'è il file json che mappa le variabili ogs e cms (chl:Chla), puoi mettere solo la cartella dove sta il file o direttamente il path che finisce con /cms2ogs.json
+	 python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/compute_avgstd.py -in /leonardo_work/OGS23_PRACE_IT_0/adelsavio/ds_train_789 -out /leonardo_work/OGS23_PRACE_IT_0/adelsavio/ds_train_789/statistics_789 -map /leonardo_work/OGS23_PRACE_IT_0/adelsavio
 
-	 python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/compute_avgstd.py -in /leonardo_work/OGS23_PRACE_IT_0/adelsavio -out /leonardo_work/OGS23_PRACE_IT_0/adelsavio
 
 
 
-B. MAKE PT DS: make_pt_ds
+B1. MAKE PT DS TRAIN TEST E VALIDATION: make_pt_ds_anna
+
+  -dp : input path (hard coding: NARF_nc e iCMS_nc train dataset, nc_OGS_test e nc_iCMS_test test dataset, nc_OGS_val e nc_iCMS_val validation dataset)
+  -op : output path 
 
   CON flag -stat (gli passi tu i file txt con le statistiche) e sempre per test e val
   srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --gres=tmpfs:10g --gres=gpu:0 --partition=boost_usr_prod --pty bash -i
@@ -55,18 +60,21 @@ B. MAKE PT DS: make_pt_ds
   1. creo file .pt solo del train:
   	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds_anna.py  \
 	  -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio \
+	  -op /leonardo_scratch/large/userexternal/adelsavi \
 	  -v chl \
       -train_only 
 
   2. creo file .pt solo test
 	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds_anna.py  \
 	  -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio \
+	  -op /leonardo_scratch/large/userexternal/adelsavi \
 	  -v chl \
       -test_only 
 
   3. creo file .pt solo validation
 	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds_anna.py  \
 	  -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio \
+	  -op /leonardo_scratch/large/userexternal/adelsavi \
 	  -v chl \
       -test_only 
 	  -val 
@@ -76,8 +84,31 @@ B. MAKE PT DS: make_pt_ds
 
 	  python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds.py \
 	  -dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/ \
+	  -op /leonardo_scratch/large/userexternal/adelsavi \
 	  -r \
       -train_only 
+  
+B2. MAKE PT DS TRAIN E TEST: make_pt_ds
+
+	-ds path input path (hard coding: NARF_nc e iCMS_nc train dataset, nc_OGS_test e nc_iCMS_test test dataset)
+	
+	TRAIN:
+
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds.py  \
+	-dp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/ds_train_789  \
+	-op /leonardo_scratch/large/userexternal/adelsavi/file_pt_789 \
+	-v chl \
+	-train_only 
+
+	TEST:
+
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/make_pt_ds.py \
+	-dp /leonardo_work/OGS23_PRACE_IT_0/fadobbat/working_data  \
+	-op /leonardo_scratch/large/userexternal/adelsavi/file_pt_789 \
+	-v chl \
+	-test_only
+	
+
 
 
 C. TRAIN: train.py

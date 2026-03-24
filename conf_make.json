@@ -1,0 +1,10 @@
+{
+    "ogs_test_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/nc_OGS_test",
+    "cms_test_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/nc_iCMS_test",
+    "ogs_train_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/NARF_nc",
+    "cms_train_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/iCMS_nc",
+    "ogs_val_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/nc_OGS_val",
+    "cms_val_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/nc_iCMS_val",
+    "stat_path": "/leonardo_scratch/large/userexternal/adelsavi/statistics_train_val_test",
+    "map_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/cms2ogs.json"
+}

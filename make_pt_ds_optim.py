@@ -8,6 +8,41 @@ from alive_progress import alive_bar
 from typing import List, Dict
 import json
 import natsort
+import matplotlib.pyplot as plt
+
+
+
+def plot_boxplot_raw_input_target(save_path, varx_list: np.array, vary_list: np.array, mask: np.array, var_list: list, split: str):
+    """
+    Disegna un boxplot dei valori grezzi non mascherati dei dataset input (CMS) e target (OGS)
+    varx_list: array grezzo CMS, shape = (samples, channels, H, W, D)
+    vary_list: array grezzo OGS, shape = (samples, channels, H, W, D)
+    mask: mask originale usata per i dati
+    var_list: lista delle variabili considerate
+    split: train/test/validation
+    """
+    # espandi la mask sui samples
+    mask_fullx = np.repeat(mask, varx_list.shape[0], axis=0)
+  
+    mask_fully = np.repeat(mask, vary_list.shape[0], axis=0)
+    
+    x_masked = np.ma.masked_array(varx_list, mask_fullx)
+    y_masked = np.ma.masked_array(vary_list, mask_fully) 
+
+    x_vals = x_masked.compressed()
+    y_vals = y_masked.compressed() 
+    plt.figure(figsize=(10,6))
+    # plt.boxplot([np.log1p(x_vals), np.log1p(y_vals)], tick_labels=["Input (CMS)", "Target (OGS)"]) 
+    plt.boxplot([x_vals, y_vals], tick_labels=["Input (CMS)", "Target (OGS)"]) # np.log1p
+
+
+
+    plt.title(f"Boxplot valori non normalizzati solo quelli non mascherati - {split} - variabili: {', '.join(var_list)}")
+    plt.ylabel("Valori non normalizzati")
+    save_path = os.path.join(save_path, f"boxplot_{split}{var_list[0]}.png")
+    plt.savefig(save_path)
+    print(f"[INFO] Boxplot salvato in {save_path}")
+
 
 class obj(object):
     def __init__(self, d):
@@ -65,28 +100,113 @@ def get_xy_single_var(cms_path:str, ogs_path:str, cms2ogs_map:Dict[str, str], cm
 
 
 
-# normalization with for loop
-def normalize(ds:np.array, means:np.array, stds:np.array, mask:np.array):
-    """Compute normalization of the dataset, given its mean
-       and standard deviation.
-       MASK: array booleano della stessa forma spaziale di un singolo campione, che indica quali elementi devono essere ignorati nella normalizzazione.
-       Le posizioni mascherate vengono infine riempite con 1e7 per indicare valori “inutilizzabili”.
-    """
-    print('input mask shape', mask.shape) # dovrebbe essere (1 = C, 27, 300, 494)
-    mask = np.repeat(mask, ds.shape[0], axis=0) # Qui la maschera originale, che copre solo le dimensioni spaziali di un singolo campione, viene ripetuta lungo l’asse dei campioni, in modo che corrisponda alla forma completa di ds.
-    # print(ds.shape[0])
-    ds = np.ma.masked_array(ds, mask) # crea un array mascherato, dove tutti gli elementi dove mask=True vengono ignorati nelle operazioni matematiche.
-    normalized_ds = np.zeros_like(ds, dtype=np.float32)
-    print('mask shape2:', mask.shape)
-    print('ds shape:', ds.shape)
-    # print(ds.ndim)
-    # NOTA: questi due cicli for probabilmente potrebbero essere sostituiti con qualocsa di più efficiente -> BROADCASTING ?
-    for i in range(ds.shape[0]):  # Iterate over each data sample
-        for v in range(ds.shape[1]):  # Iterate over each channel
-           normalized_ds[i, v, :, :, :] = np.ma.masked_invalid((ds[i, v, :, :, :] - means[v]) / stds[v]).filled(1e7)
+# normalization with for loop -> MANTIENI PER ORA QUESTA FUNZIONE PERCHE' SAI CHE E' CORRETTA ED E' CONCETTULMENTE PIU' SEMPLICE quindi all'nizio va bene
+# def normalize(ds:np.array, means:np.array, stds:np.array, mask:np.array):
+#     """Compute normalization of the dataset, given its mean
+#        and standard deviation.
+#        MASK: array booleano della stessa forma spaziale di un singolo campione, che indica quali elementi devono essere ignorati nella normalizzazione.
+#        Le posizioni mascherate vengono infine riempite con 1e7 per indicare valori “inutilizzabili”.
+#     """
+#     print('input mask shape', mask.shape) # dovrebbe essere (1 = C, 27, 300, 494)
+#     mask = np.repeat(mask, ds.shape[0], axis=0) # Qui la maschera originale, che copre solo le dimensioni spaziali di un singolo campione, viene ripetuta lungo l’asse dei campioni, in modo che corrisponda alla forma completa di ds.
+#     ds = np.ma.masked_array(ds, mask) # crea un array mascherato, dove tutti gli elementi dove mask=True vengono ignorati nelle operazioni matematiche.
+#     normalized_ds = np.zeros_like(ds, dtype=np.float32) # creazione di un 'contenitore' vuoto dove metterci i dati normalizzati
+#     # print('mask shape2:', mask.shape)
+#     # print('ds shape:', ds.shape)
+#     # print(ds.ndim)
+#     # NOTA: questi due cicli for probabilmente potrebbero essere sostituiti con qualocsa di più efficiente -> BROADCASTING ?
+#     for i in range(ds.shape[0]):  # Iterate over each data sample
+#         for v in range(ds.shape[1]):  # Iterate over each channel
 
-    print('output shape:', normalized_ds.shape)
-    return normalized_ds.data
+#            normalized_ds[i, v, :, :, :] = np.ma.masked_invalid(np.ma.divide((ds[i, v, :, :, :] - means[v]), stds[v])).filled(1e7) # maschera eventuali valori nan o inf e sostituisce i valori mascherati con 1e7
+
+#     # print('output shape:', normalized_ds.shape)
+#     # print("\n[DEBUG masked array] dtype:", ds.dtype)
+#     # print("[DEBUG masked array] min/max:", np.min(ds), np.max(ds))
+#     # print("[DEBUG] std, mean", stds, means)
+    
+#     # print("\n[DEBUG normalized ds] dtype:", normalized_ds.dtype)
+#     # print("[DEBUG normalized ds] min/max:", np.min(normalized_ds), np.max(normalized_ds))
+
+#     # print("[DEBUG normalized ds mascherato] min/max:", np.min(np.ma.masked_array(normalized_ds, mask)), np.max(np.ma.masked_array(normalized_ds, mask)))
+
+
+#     return normalized_ds.data
+
+
+
+# NORMALIZE CHE NON DA' ERRORE DI OVERFLOW
+def normalize(ds: np.array, means: np.array, stds: np.array, mask: np.array):
+    # ripeti la mask lungo i campioni
+    mask_full = np.repeat(mask, ds.shape[0], axis=0)
+    
+    # crea array mascherato
+    ds_masked = np.ma.masked_array(ds, mask_full)
+    
+    # prepara contenitore finale
+    normalized_ds = np.zeros_like(ds, dtype=np.float32)
+    
+    for i in range(10):
+        for v in range(ds.shape[1]):
+            # operazioni solo sui valori non mascherati
+            valid_data = ds_masked[i, v, :, :, :].compressed()  # prendi solo valori non mascherati
+            if valid_data.size > 0:
+                normalized_values = (valid_data - means[v]) / stds[v]
+            else:
+                print('No valid data')
+            
+            # ricostruisci l'array completo con 1e7 per i mascherati
+            temp = np.full(ds_masked[i, v, :, :, :].shape, 1e7, dtype=np.float32)
+            temp[~ds_masked[i, v, :, :, :].mask] = normalized_values
+            normalized_ds[i, v, :, :, :] = temp
+
+        print(i)
+        print("[DEBUG normalized ds con maschera] min/max:", np.min(normalized_ds), np.max(normalized_ds))
+        print("[DEBUG normalized ds solo valori mascherati] min/max:", np.ma.masked_array(normalized_ds, mask_full).max(), np.ma.masked_array(normalized_ds, mask_full).min())
+        print("[DEBUG normalized ds solo valori mascherati] min/max:", ds_masked.data.max(), ds_masked.data.min())
+        print()
+
+    return normalized_ds
+
+
+
+
+# DEBUGGING ERRORE OVERFLOW
+# def normalize(ds:np.array, means:np.array, stds:np.array, mask:np.array):
+#     mask = np.repeat(mask, ds.shape[0], axis=0)
+#     ds = np.ma.masked_array(ds, mask) 
+#     normalized_ds = np.zeros_like(ds, dtype=np.float32)
+#     for i in range(10):  
+#         for v in range(ds.shape[1]):
+#             print('sottrazione')
+#             tmp = ds[i, v, :, :, :] - means[v]
+
+#             print('divisione sd')
+#             print("dtype:", tmp.dtype)
+
+#             raw = tmp.data
+#             print("REAL max:", raw.max())
+#             print("REAL min:", raw.min())
+
+#             with np.errstate(over='raise', divide='raise', invalid='raise'):
+#                 try:
+#                     tmp2 = tmp / stds[v]
+#                     print('sd:', stds[v])
+
+#                 except FloatingPointError:
+#                     print("!!!!  ERRORE divisione !!!!")
+#                     print("i:", i, "v:", v)
+#                     print('sd:', stds[v])
+#                     print("REAL max:", raw.max())
+#                     print("REAL min:", raw.min())
+
+#                     # continua comunque il loop
+#                     tmp2 = np.full_like(tmp, 1e7)  # oppure np.nan
+
+#             print('invalid e filled')
+
+#             normalized_ds[i, v, :, :, :] = np.ma.masked_invalid(tmp2).filled(1e7)
+#     return normalized_ds.data
 
 
 # def normalize(ds: np.array, means: np.array, stds: np.array, mask: np.array):
@@ -117,7 +237,7 @@ def normalize(ds:np.array, means:np.array, stds:np.array, mask:np.array):
 
 
 
-def make_var_dataset(cms_path:str, ogs_path:str, save_path:str, stat_path:str, train_path:str, var_list: List[str], cms2ogs_map:Dict[str, str], split:str): 
+def make_var_dataset(cms_path:str, ogs_path:str, save_path:str, stat_path:str, train_path:str, var_list: List[str], cms2ogs_map:Dict[str, str], split:str, altro: str = None): 
     '''
         Saves the Pytorch dataset corresponding to a given variable in the output folder.
 
@@ -135,7 +255,7 @@ def make_var_dataset(cms_path:str, ogs_path:str, save_path:str, stat_path:str, t
 
     cms = []
     ogs = []
-    varx = []
+
 
     x_means = []
     x_stds = []
@@ -179,25 +299,33 @@ def make_var_dataset(cms_path:str, ogs_path:str, save_path:str, stat_path:str, t
     
     # Calcola mask solo sul training set
     if split == 'train':
-        print('x shape:', x.shape)
+        # print('x shape:', x.shape)
         mask = x[0] > 100000 # np.any(x > 100000, axis=0)
     else:
         # Legge solo il CMS train path per calcolare la maschera 
         # GIUSTO SE LE MASCHERE SONO UGUALI per tutti i timestamp !
         # qui aggiungo un for loop altrimenti l'output mashera mi dava shape sbagliata, cioè senza la shape channel, dato che per tutte le variabili CREDO ci siano le stesse maschere
         # invece di iterare per le variabili si potrebbe fare un reshape della maschera e basta 
-        for v in var_list:
-            varx_train, _ = get_xy_single_var(train_path, None, cms2ogs_map, var, 'train') 
-            varx.append(varx_train)
-        varx  = np.array(list(zip(*varx)))
-        # print('varx', varx.shape) # dovrebbe essere (717, 1, etc) -> risolto
-        mask = varx[0] > 100000 # np.any(x > 100000, axis=0)
+        
+        # OPZIONE 1. LOOP PER LE VARIABILI
+        # for var in var_list:
+        #     varx_train, _ = get_xy_single_var(train_path, None, cms2ogs_map, var, 'train') 
+        #     varx.append(varx_train)
+        # varx  = np.array(list(zip(*varx)))  # print('varx', varx.shape) dovrebbe essere (717, num channel, etc)
+        # mask = varx[0] > 100000 # np.any(x > 100000, axis=0) se vogliamo considerare tutti i timestamp
 
-    # print('print mask shape', mask.shape)
-
+        # OPZIONE 2. RESHAPE 
+        # se invece le mask sono uguali per tutte le variabili possiamo mettere noi la shape del channel senza iterare per tutte le variabili -> CONFERMO SONO uguali per ogni variabile ed ogni timestamp! 
+        varx_train, _ = get_xy_single_var(train_path, None, cms2ogs_map, var_list[0], 'train')
+        varx_train = varx_train[:, None, ...]  # (batch, channel, H, W, D)
+        mask = varx_train[0] > 100000  # (batch, H, W, D)
+    
+    # plot_boxplot_raw_input_target(save_path, x, y, mask, var_list, split)
+    
     x = normalize(x, x_means, x_stds, mask)
     y= normalize(y, y_means, y_stds, mask)
     torch_ds = TensorDataset(torch.Tensor(x), torch.Tensor(y))
+
 
  
     if len(var_list) == len(cms2ogs_map):
@@ -208,7 +336,7 @@ def make_var_dataset(cms_path:str, ogs_path:str, save_path:str, stat_path:str, t
             name = name + f"{var}_"
 
     os.makedirs(save_path, exist_ok=True)
-    ds_save_path = os.path.join(save_path,f"{name}_{split}_dataset.pt")
+    ds_save_path = os.path.join(save_path,f"{name}{split}_dataset{altro}.pt")
     print(f"Saving the {split} pytorch datasets in {save_path}")
     torch.save(torch_ds, ds_save_path)
 
@@ -231,6 +359,7 @@ if __name__== "__main__":
     split = None
     conf_path = None
     var_list = []
+    altro = None
 
     while i < len(sys.argv):
 
@@ -259,6 +388,15 @@ if __name__== "__main__":
         elif sys.argv[i] == "-split":
             if split: raise ValueError('Repeated input for -split')
             split = sys.argv[i+1]; i += 2
+
+        elif sys.argv[i] == "-altro":
+            if i+1 < len(sys.argv) and not sys.argv[i+1].startswith("-"):
+                altro = sys.argv[i+1]
+                i += 2
+            else:
+                # niente valore → ignora e lascia None
+                i += 1
+
 
        
     # controllo sullo split   
@@ -292,10 +430,10 @@ if __name__== "__main__":
     # chiamiamo funzione che crea i file .pt 
     if var_list != []:
         if split == 'train':
-            make_var_dataset(conf.cms_train_path,conf.ogs_train_path, save_path, conf.stat_path, cms_train_path, var_list, cms2ogs_map, split)
+            make_var_dataset(conf.cms_train_path,conf.ogs_train_path, save_path, conf.stat_path, cms_train_path, var_list, cms2ogs_map, split, altro)
         elif split == 'test':
-            make_var_dataset(conf.cms_test_path,conf.ogs_test_path, save_path, conf.stat_path, cms_train_path, var_list, cms2ogs_map, split)
+            make_var_dataset(conf.cms_test_path,conf.ogs_test_path, save_path, conf.stat_path, cms_train_path, var_list, cms2ogs_map, split, altro )
         else:
-            make_var_dataset(conf.cms_val_path,conf.ogs_val_path, save_path, conf.stat_path, cms_train_path, var_list, cms2ogs_map, split)
+            make_var_dataset(conf.cms_val_path,conf.ogs_val_path, save_path, conf.stat_path, cms_train_path, var_list, cms2ogs_map, split, altro)
 
     

@@ -6,5 +6,10 @@
     "ogs_val_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/nc_OGS_val",
     "cms_val_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/nc_iCMS_val",
     "stat_path": "/leonardo_scratch/large/userexternal/adelsavi/statistics_train_val_test",
-    "map_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/cms2ogs.json"
+    "map_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/cms2ogs.json",
+
+    "rivers_train_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_train",
+    "rivers_test_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/vector_test",
+    "rivers_val_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/vector_val"
+
 }

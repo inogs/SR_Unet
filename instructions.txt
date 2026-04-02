@@ -41,6 +41,7 @@ A. PREPROC
 	 -out path di output in cui verranno create le artelle ogs e cms
 	 lo fa automaticamente per tutte le variabili
 	 -map path dove c'è il file json che mappa le variabili ogs e cms (chl:Chla), puoi mettere solo la cartella dove sta il file o direttamente il path che finisce con /cms2ogs.json
+	 
 	 python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/compute_avgstd.py -in /leonardo_work/OGS23_PRACE_IT_0/adelsavio/ds_train_789 -out /leonardo_work/OGS23_PRACE_IT_0/adelsavio/ds_train_789/statistics_789 -map /leonardo_work/OGS23_PRACE_IT_0/adelsavio
 
 
@@ -166,7 +167,7 @@ D.  PREDICTION: produce_predictions.py
     -r
 
 E. TEST: testing_pl.py
-   nella flag -stat devo mettere il path per la cartella ogs dentro a statistuics che contiene il file txt con le statistiche di train/test
+   nella flag -stat devo mettere il path per la cartella ogs dentro a statistics che contiene il file .txt con le statistiche di train
    
    srun -N 1 -n 4 --time=00:15:00 --account OGS23_PRACE_IT_0 --gres=tmpfs:10g --gres=gpu:1 --partition=boost_usr_prod --pty bash -i
 

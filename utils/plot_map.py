@@ -288,21 +288,22 @@ def plot_netcdf(file, var_name, output_dir, threshold=None):
     var_data = var[:]
     lon = dataset.variables['longitude'][:]
     lat = dataset.variables['latitude'][:]
+    file_title = os.path.basename(file)
 
     # Statistiche globali
-    print("Global Min:", np.nanmin(var_data))
-    print("Global Max:", np.nanmax(var_data))
-    print("Any inf:", np.isinf(var_data).any())
-    print("Any nan:", np.isnan(var_data).any())
+    # print("Global Min:", np.nanmin(var_data))
+    # print("Global Max:", np.nanmax(var_data))
+    # print("Any inf:", np.isinf(var_data).any())
+    # print("Any nan:", np.isnan(var_data).any())
 
     for i, layer in enumerate(var_data):
         vmax = np.nanmax(layer)
 
-        print(f"\nLayer {i}")
-        print("Min:", np.nanmin(layer))
-        print("Max:", np.nanmax(layer))
-        num_negatives = np.sum((layer < 0) & (~np.isnan(layer)))
-        print("Negatives:", num_negatives, "on:", layer.size)
+        # print(f"\nLayer {i}")
+        # print("Min:", np.nanmin(layer))
+        # print("Max:", np.nanmax(layer))
+        # num_negatives = np.sum((layer < 0) & (~np.isnan(layer)))
+        # print("Negatives:", num_negatives, "on:", layer.size)
 
         # Calcolo percentuale sopra threshold se definito
         perc_above = None
@@ -327,7 +328,7 @@ def plot_netcdf(file, var_name, output_dir, threshold=None):
         ax.set_ylabel('Latitudine', fontsize=40)
 
         # Inserisco percentuale nel titolo se presente
-        title = f'{var_name} - layer {i}'
+        title = f'{var_name} - layer {i} - {file_title}'
         if perc_above is not None:
             title += f' | {perc_above:.2f}% > {threshold}'
         ax.set_title(title, fontsize=20)

@@ -195,3 +195,35 @@ G. plot_map_anna: plotta 1 riga il file target (cadeau) che gli passi cper primo
 	python /leonardo/home/userexternal/adelsavi/git/codice_fede/utils/plot_map_anna.py chl /leonardo_work/OGS23_PRACE_IT_0/adelsavio/original/nc_OGS_test/Chla/Chla_2012_014.nc /leonardo_work/OGS23_PRACE_IT_0/adelsavio/original/predictions/chl/chl_2012_014.nc -abs
 
 	python /leonardo/home/userexternal/adelsavi/git/codice_fede/utils/plot_map_anna.py chl /leonardo_work/OGS23_PRACE_IT_0/adelsavio/original/nc_OGS_test/Chla/Chla_2012_014.nc /leonardo_work/OGS23_PRACE_IT_0/adelsavio/bs_32/original/predictions/chl/chl_2012_014.nc -abs
+
+
+
+H. esplorazione_dati.py: gli passi un dataset e per ogni file .nc guarda minimo, massimo globali, presenza di inf e nan e di valori negativi. se presenti dei valori negativi in un file viene fatta un' analisi per ogni layer e salvato il relativo plot in cui i valori negativi vengono colorati di rosso
+
+	1. path file py
+	2. path dati
+	3. variabile 
+	4. path output -> qui vengono salvati sia i file .txt con l'analisi dei dati sia gli eventuali plot 
+
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/esplorazione_dati.py /leonardo_work/OGS23_PRACE_IT_0/adelsavio/iCMS_nc no3 /leonardo_work/OGS23_PRACE_IT_0/adelsavio/iCMS_nc/
+
+
+I: percentile.py: gli passi i path dei tre dataset train test e val che venogno uniti, vengono divisi per mese e vengono presi i tre layer per ogni mese e salvato il quinto percentile. 
+
+	1. path script py
+	2. dataset1,dataset2,dataset3
+	3. variabile
+	4. path cartella dove savare il file txt o path file txt dove salvare i percentili
+
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/percentile.py /leonardo_work/OGS23_PRACE_IT_0/adelsavio/iCMS_nc,/leonardo_work/OGS23_PRACE_IT_0/adelsavio/nc_iCMS_test,/leonardo_work/OGS23_PRACE_IT_0/adelsavio/nc_iCMS_val no3 /leonardo_work/OGS23_PRACE_IT_0/adelsavio/percentile_output.txt
+
+
+
+L. esplorazione_negatives.py: gli passo tutti e tre i dtaset train val test di una variabile e come output mi da un plot con i conteggi di eventuali valori negativi sulla mappa mare/terra
+
+	1. path script py
+	2. dataset1,dataset2,dataset3
+	3. variabile
+	4. path output
+	
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/esplorazione_negatives.py /leonardo_work/OGS23_PRACE_IT_0/adelsavio/nc_iCMS_val,/leonardo_work/OGS23_PRACE_IT_0/adelsavio/nc_iCMS_test,/leonardo_work/OGS23_PRACE_IT_0/adelsavio/iCMS_nc no3 /leonardo_work/OGS23_PRACE_IT_0/adelsavio/nc_iCMS_val/

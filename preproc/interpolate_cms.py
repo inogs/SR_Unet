@@ -35,7 +35,7 @@ def interpolate_2d(values2interp: np.array, old_lon:np.array, old_lat:np.array, 
     new_lon, new_lat = np.meshgrid(new_lat, new_lon, indexing='ij')
 
     # Extract the data to be interpolated
-    new_data = new_grid[vargrid][:]
+    new_data = new_grid[var_grid][:]
 
     # Apply mask if the data is masked (land points or invalid values)
     masked_data = np.ma.masked_invalid(values2interp)  # Mask invalid values (NaNs, etc.)

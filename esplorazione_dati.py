@@ -246,6 +246,7 @@ import subprocess
 
 
 def analyze_file(file_path, output_txt, var_name, log):
+    # file_path = os.path.join(file_path, var_name)
     dataset = nc.Dataset(file_path, 'r')
     var_data = dataset.variables[var_name][:].filled(np.nan) # faccio diventare le maschere nan così sono più soicura di escluderle dopo
     var_data1 = dataset.variables[var_name][:]
@@ -304,6 +305,7 @@ def analyze_file(file_path, output_txt, var_name, log):
 
 
 def analyze_dataset(data_dir, var_name, output_txt):
+    data_dir = os.path.join(data_dir, var_name)
     files = natsort.natsorted([
         f for f in os.listdir(data_dir) if f.endswith(".nc")
     ])

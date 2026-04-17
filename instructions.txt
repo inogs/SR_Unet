@@ -11,13 +11,14 @@ A. PREPROC
 
 
   1A. INTERPOLATE: interpolate_cms
+	
+	1. ip input path dove ci sono i dati copernicus che DEVONO essere divisi in sottocartelle che rappresentano le variabili (c'è join path con nome ar dentro il codice)
+	2. op dove salvare i dati interpolati 
+	3. gp dove prendere il file cadeau di riferimento per l'interpolazione -> devo passargli un singolo file netcdf di cadeau
+	4. nomenclatura var cadeau
+	5. nomenclatura corrispondente var copernicus 
 
-    python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/interpolate_cms.py  \
-	  -ip /leonardo_work/OGS23_PRACE_IT_0/adelsavio/AdriaticNC  \
-	  -op /leonardo_work/OGS23_PRACE_IT_0/adelsavio/Adriatic_nc_out \
-	  -gp /leonardo/home/userexternal/adelsavi/dati_half_cadeau/1o64_deg_res/Chla/Chla_2007_062.nc \
-	  -vgp Chla \
-      -v chl
+	python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/interpolate_cms.py -ip /leonardo_work/OGS23_PRACE_IT_0/adelsavio/AdriaticNC -op /leonardo_work/OGS23_PRACE_IT_0/adelsavio/Adriatic_nc_out -gp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/NARF_nc/N1p/N1p_2007_047.nc -vgp N1p -v po4
 
 
   2A. SPLIT TRAIN TEST: split_train_test

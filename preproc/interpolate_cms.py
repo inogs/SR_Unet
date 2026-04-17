@@ -1,3 +1,9 @@
+# NB!!!!dato che il processo se si ferma riprende dall ultimo file creato non controlla se il file che è stato interrotto ha tutti i dati validi e può essere che interropendolo 
+# l'ultimo file venga creato male. sarebbe da nominare il file inizialmente con un nome es chl_2007-009.pippo e poi una volta che viene concluso il processo fare mv 
+# e rinominarlo con il nome corretto (senza pippo) perchè se si interrompe il processo e c'è un file chiamato pipppo nella cartella sai che potrebbe essere un file danneggiato e quindi deve essere rifatto
+# infatti se fai un mv dentro lo stesso sistema (penso si intenda nella stessa cartella) non c'è un momento intermedio tra .pippo e mv e quindi sai che se viene sposttato allora il processo era sicuramente terminato correttamente e il file non è danneggiato 
+
+
 import os
 import glob
 import sys
@@ -10,7 +16,12 @@ from alive_progress import alive_bar
 
 import scipy.interpolate as intrp
 
+from mpi4py import MPI
 
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+n_processes = comm.Get_size()
+print('rank:', rank)
 
 def interpolate_2d(values2interp: np.array, old_lon:np.array, old_lat:np.array, new_grid:nc.Dataset, var_grid:str):
     """
@@ -138,9 +149,13 @@ def interpolate_data(cms_name: str, input_path: str, output_path: str, grid_file
         if n_dim == 3:
             new_depth = grid_nc['depth'][:]
 
+        data_files = tuple(glob.glob(os.path.join(input_path, "*.nc")))
+
+        assigned_data_files = data_files[rank::n_processes]
+
         with alive_bar(0, title=f"Interpolating raw CMS data...") as bar:
             # Iterate over the NetCDF files in the source directory
-            for file_path in glob.glob(os.path.join(input_path, "*.nc")):
+            for file_path in assigned_data_files:
                 # Open the original NetCDF file for reading
                 with nc.Dataset(file_path, "r") as source_nc:
                     source_file_name = os.path.basename(file_path)

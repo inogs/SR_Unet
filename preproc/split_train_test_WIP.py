@@ -1,27 +1,18 @@
 import os
+from typing import List
 import random
-import shutil
-import sys
-import json
-from typing import List, Any
-from alive_progress import alive_bar
-import random
+import argparse
 
 seed = 42
 
 
-# THIS MUST BECOME GET FILE TO MOVE AND THEN YOU MOVE ALL OF THEM
-# get two lists as return value: the first one contains the files to move, the second one contains the remaining files
-def get_random_files(source_dir:str, percentage:float) -> (List[str], List[str]):
-    
+def get_file_list(source_dir:str, test_size:float, val_size:float) -> (List[str], List[str],List[str]):
     random.seed(seed)
-
-    file_list = os.listdir(source_dir)
-    file_list = [f for f in file_list if os.path.isfile(os.path.join(source_dir, f))]
+    
+    file_list = [f for f in os.listdir(source_dir) if os.path.isfile(os.path.join(source_dir, f)) if f[-6:-3].isnumeric()]
 
     seasons = {"winter" : [], "spring" : [], "summer" : [], "autumn" : []}
     for file_name in file_list:
-        # print("file name:", file_name)
         t = int(file_name[-6:-3])
         if 0 <= t < 18:
             seasons["winter"].append(file_name)
@@ -29,102 +20,72 @@ def get_random_files(source_dir:str, percentage:float) -> (List[str], List[str])
             seasons["spring"].append(file_name)
         elif 36 <= t < 54:
             seasons["summer"].append(file_name)
-        else:
+        elif 54 <= t <= 72:
             seasons["autumn"].append(file_name)
-    # We ensure that data of each season are balanced in test and training set
-    files_to_move = []
+
+    test_file_list = []
     for ssn in seasons:
         l = seasons[ssn]
-        # Calculate the number of files to select -> MODIFICO PER NON RISCHIARE DI AVERE 0 FILE PER QUELLA STAGIONE, A MENO CHE LA LEN = 0
-        num_files = min(len(l), max(1, int(len(l) * percentage)))
-        # Randomly select the files
+        num_files = min(len(l), max(1, int(len(l) * test_size)))
         random_files = random.sample(l, num_files)
-        # Add files to the list
-        files_to_move += random_files
+        test_file_list += random_files
+
+    val_file_list = []
+    for ssn in seasons:
+        l = seasons[ssn]
+        remaining_files = [f for f in l if f not in test_file_list]
+        num_files = min(len(remaining_files), max(1, int(len(remaining_files) * val_size)))
+        random_files = random.sample(remaining_files, num_files)
+        val_file_list += random_files
+
+    train_file_list = [f for ssn in seasons for f in seasons[ssn] if f not in test_file_list if f not in val_file_list]
     
-    print(f"Selected {len(files_to_move)} files to move, which corresponds to {len(files_to_move)/len(file_list)*100:.2f}% of the total files.")
-    print(f"Selected files: {files_to_move}")
+    return test_file_list, train_file_list, val_file_list
 
-    # take a second list of the remaining files
-    other_files = [f for f in file_list if f not in files_to_move]
-    # print number of remaining files
-    print(f"Remaining files: {len(other_files)}")
 
-    return files_to_move, other_files
+def parse_input_parameters():
 
-def move_files(files_to_move:List[str], source_dir:str, dest_dir:str) -> None:
+    parser = argparse.ArgumentParser(
+        description="Split the dataset into train and test files."
+    )
+    parser.add_argument("-dp", "--data-path", required=True,
+                        help="Input dataset directory.")
+    parser.add_argument("-ts", "--test-size", required=True,
+                        type=lambda value: float(value) if 0.0 <= float(value) <= 1.0 else (_ for _ in ()).throw(argparse.ArgumentTypeError("Value must be between 0.0 and 1.0")),
+                        help="Fraction of data to reserve for test set, e.g. 0.2.")
+    parser.add_argument("-vs", "--validation-size", default=0.0,
+                        type=lambda value: float(value) if 0.0 <= float(value) <= 1.0 else (_ for _ in ()).throw(argparse.ArgumentTypeError("Value must be between 0.0 and 1.0")),
+                        help="Fraction of training data to use as validation, e.g. 0.1.")
+    args = parser.parse_args()
 
-    os.makedirs(dest_dir, exist_ok=True)
+    return args
 
-    for file in files_to_move:
-        file_src_path = os.path.join(source_dir, file)
-        file_dst_path = os.path.join(dest_dir, file)
-
-        if not os.path.isfile(src):
-            raise FileNotFoundError(f"Source file does not exist: {file_src_path}")
-        # end if
-        
-        shutil.move(file_src_path, file_dst_path)
-    # end for
-# end def (move_files)
-
-def read_input_parameters():
-    i = 1
-    test_size = None
-    data_path = None
-    val = False
-
+def print_file_list(file_list:List[str], output_file_path:str ,output_file:str) -> None:
     
-    while i < len(sys.argv):
-        if sys.argv[i] == "-dp":
-            if data_path != None: raise ValueError("Repeated input for data path")
-            data_path = sys.argv[i+1]; i+= 2
-        elif sys.argv[i] == "-ts":
-            if test_size != None: raise ValueError("Repeated input for variable")
-            test_size = sys.argv[i+1]; i+= 2
-        elif sys.argv[i] == "-val":
-            val = True
-            i += 1
-        else:
-            i+=1
-    if data_path is None: raise TypeError("Missing value for data path")
-    # exit(0)
-    if test_size is None: raise TypeError("You need to specify the size of the test set")
-    # exit(0)
-
-    print(f"Data path: {data_path}")
-    print(f"Test size: {test_size}")
-    print(f"Split train and validation set: {val}")
-
-    return data_path, test_size, val
-# end def
-    
+    # make sure input list is not empty
+    if len(file_list) != 0:
+        with open(os.path.join(output_file_path, output_file), 'w') as f:
+            for file_path in file_list:
+                f.write(f"{file_path}\n")
 
 if __name__ == '__main__':
-    '''
-        Splits the dataset into train and test set.
-
-        Parameters:
-        -dp data path
-        -ts indicates the percentage of data included in the test set. Example: for a test size of 20% write "-ts 0.2".
-        -val if we have to split train and validation set 
-    '''
    
-    data_path, test_size, val = read_input_parameters()
-    train_path = os.path.join(data_path, "var_train")
-    test_path = os.path.join(data_path, "var_test")
-    # check if directories exist, if not create them
-    if not os.path.exists(train_path):
-        os.makedirs(train_path)
-    if not os.path.exists(test_path):
-        os.makedirs(test_path)
-    
-    percentage_to_move = float(test_size)
+    args = parse_input_parameters()
 
-    test_files_list, train_files_list = get_random_files(data_path, percentage_to_move)
+    print(f"Data path: {args.data_path}")
+    print(f"Test size: {args.test_size}")
+    print(f"Validation size: {args.validation_size}")
 
+    # check over sum of test and validation size
+    if args.test_size + args.validation_size >= 1.0:
+        raise ValueError("Test size and validation size must sum to less than 1.0")
 
-    print(f"[split_test_train with test size {test_size}] Starting execution")
-    move_files(test_files_list, source_dir = data_path, dest_dir = test_path)
-    move_files(train_files_list, source_dir = data_path, dest_dir = train_path)
-    print(f"[split_test_train with test size {test_size}] Ending execution")
+    print(f"Train size: {1.0 - args.test_size - args.validation_size}")
+
+    test_files_list, train_files_list, val_files_list = get_file_list(args.data_path, args.test_size, args.validation_size)
+
+    print(f"[printing file lists]")
+    print_file_list(train_files_list, output_file_path=args.data_path, output_file="train_files.txt")
+    print_file_list(val_files_list, output_file_path=args.data_path, output_file="val_files.txt")
+    print_file_list(test_files_list, output_file_path=args.data_path, output_file="test_files.txt")
+    print(f"[ending execution]")

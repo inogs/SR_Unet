@@ -2,18 +2,36 @@ import os
 from typing import List
 import random
 import argparse
+import re
 
-seed = 42
+
+
+def extract_year_and_season(s):
+    groups = re.findall(r"\d+", s)
+    if len(groups) < 2:
+        return (None, None)
+    return groups[-2], groups[-1]
+
+
+def file_sort_key(file_name: str):
+    year, season = extract_year_and_season(file_name)
+    return int(year), int(season), file_name
 
 
 def get_file_list(source_dir:str, test_size:float, val_size:float) -> (List[str], List[str],List[str]):
-    random.seed(seed)
     
-    file_list = [f for f in os.listdir(source_dir) if os.path.isfile(os.path.join(source_dir, f)) if f[-6:-3].isnumeric()]
+    seed = 42
+    random.seed(seed)
+
+    file_list = sorted(
+        [f for f in os.listdir(source_dir) if os.path.isfile(os.path.join(source_dir, f)) if extract_year_and_season(f) != (None, None)],
+        key=file_sort_key,
+    )
 
     seasons = {"winter" : [], "spring" : [], "summer" : [], "autumn" : []}
     for file_name in file_list:
-        t = int(file_name[-6:-3])
+        # get second argument of extract_year_and_season, which is the season number (0-72), cast it to int
+        t = int(extract_year_and_season(file_name)[1])    
         if 0 <= t < 18:
             seasons["winter"].append(file_name)
         elif 18 <= t < 36:
@@ -35,11 +53,14 @@ def get_file_list(source_dir:str, test_size:float, val_size:float) -> (List[str]
         l = seasons[ssn]
         remaining_files = [f for f in l if f not in test_file_list]
         num_files = min(len(remaining_files), max(1, int(len(remaining_files) * val_size)))
+        # print(f"Season: {ssn}, Remaining files: {len(remaining_files)}, Val files to select: {num_files}")
         random_files = random.sample(remaining_files, num_files)
         val_file_list += random_files
 
     train_file_list = [f for ssn in seasons for f in seasons[ssn] if f not in test_file_list if f not in val_file_list]
     
+    # print(test_file_list)
+
     return test_file_list, train_file_list, val_file_list
 
 
@@ -67,6 +88,8 @@ def print_file_list(file_list:List[str], output_file_path:str ,output_file:str) 
         with open(os.path.join(output_file_path, output_file), 'w') as f:
             for file_path in file_list:
                 f.write(f"{file_path}\n")
+    else:
+        print("Empty list")
 
 if __name__ == '__main__':
    
@@ -82,10 +105,17 @@ if __name__ == '__main__':
 
     print(f"Train size: {1.0 - args.test_size - args.validation_size}")
 
-    test_files_list, train_files_list, val_files_list = get_file_list(args.data_path, args.test_size, args.validation_size)
+    normalized_data_path = os.path.normpath(args.data_path)
+    test_files_list, train_files_list, val_files_list = get_file_list(normalized_data_path, args.test_size, args.validation_size)
+
+    folder_name = os.path.basename(normalized_data_path)
+    train_file_name = f"{folder_name}.train.txt"
+    val_file_name = f"{folder_name}.val.txt"
+    test_file_name = f"{folder_name}.test.txt"
 
     print(f"[printing file lists]")
-    print_file_list(train_files_list, output_file_path=args.data_path, output_file="train_files.txt")
-    print_file_list(val_files_list, output_file_path=args.data_path, output_file="val_files.txt")
-    print_file_list(test_files_list, output_file_path=args.data_path, output_file="test_files.txt")
+    parent_folder_path = os.path.dirname(normalized_data_path)
+    print_file_list(train_files_list, output_file_path=parent_folder_path, output_file=train_file_name)
+    print_file_list(val_files_list, output_file_path=parent_folder_path, output_file=val_file_name)
+    print_file_list(test_files_list, output_file_path=parent_folder_path, output_file=test_file_name)
     print(f"[ending execution]")

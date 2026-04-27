@@ -4,8 +4,6 @@ import random
 import argparse
 import re
 
-
-
 def extract_year_and_season(s):
     groups = re.findall(r"\d+", s)
     if len(groups) < 2:
@@ -106,37 +104,24 @@ if __name__ == '__main__':
     print(f"Train size: {1.0 - args.test_size - args.validation_size}")
 
     normalized_data_path = os.path.normpath(args.data_path)
+    output_folder_path = normalized_data_path
 
-    # get only subfolders in the normalized_data_path
     subfolders = [f.path for f in os.scandir(normalized_data_path) if f.is_dir()]
 
-    # cicle over subfolders and extract test, train and validation file lists for each of them, then print them in the provided path with name {subfolder_name}.train.txt, {subfolder_name}.val.txt and {subfolder_name}.test.txt
+    # cicle over subfolders and extract test, train and validation for each one of them
     for subfolder in subfolders:
         print(f"[processing subfolder: {subfolder}]")
-        # get folder name
+
         folder_name = os.path.basename(subfolder)
         train_file_name = f"{folder_name}.train.txt"
         val_file_name = f"{folder_name}.val.txt"
         test_file_name = f"{folder_name}.test.txt"
-        # train, test and validation file lists
+
         test_files_list, train_files_list, val_files_list = get_file_list(subfolder, args.test_size, args.validation_size)
-        # print file lists inside the provided path, at the same level as the subfolders
-        output_folder_path = normalized_data_path
+
         print_file_list(train_files_list, output_file_path=output_folder_path, output_file=train_file_name)
         print_file_list(val_files_list, output_file_path=output_folder_path, output_file=val_file_name)
         print_file_list(test_files_list, output_file_path=output_folder_path, output_file=test_file_name)
+        
         print(f"[ending processing subfolder: {subfolder}]")
-
-    # test_files_list, train_files_list, val_files_list = get_file_list(normalized_data_path, args.test_size, args.validation_size)
-
-    # folder_name = os.path.basename(normalized_data_path)
-    # train_file_name = f"{folder_name}.train.txt"
-    # val_file_name = f"{folder_name}.val.txt"
-    # test_file_name = f"{folder_name}.test.txt"
-
-    # print(f"[printing file lists]")
-    # parent_folder_path = os.path.dirname(normalized_data_path)
-    # print_file_list(train_files_list, output_file_path=parent_folder_path, output_file=train_file_name)
-    # print_file_list(val_files_list, output_file_path=parent_folder_path, output_file=val_file_name)
-    # print_file_list(test_files_list, output_file_path=parent_folder_path, output_file=test_file_name)
-    # print(f"[ending execution]")
+    # end if

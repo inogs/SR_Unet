@@ -35,7 +35,7 @@ if __name__ == '__main__':
         print(f"Max files to process: {args.n}")
 
 
-    # time reading the file list
+    # section - read file list
     start_time = time.time()
     files = []
     with open(args.file_path, 'r') as f:
@@ -48,6 +48,7 @@ if __name__ == '__main__':
     end_time = time.time()
     print(f"Time taken to read file list: {end_time - start_time} seconds for {len(files)} files")
 
+    # section - compute file-wise mean and var with xarray
     start_time = time.time()
     for counter, dataset_path in enumerate(files, start=1):
         print(f"Processing file {counter}/{len(files)}: {dataset_path}")
@@ -58,10 +59,10 @@ if __name__ == '__main__':
     end_time = time.time()
     print(f"Time taken to compute file-wise mean and var with xarray: {end_time - start_time} seconds")
 
+
+    # section - compute average and std with xarray
     start_time = time.time()
-
     mu_tot = np.mean(mus)
-
     sigma = np.sqrt(np.mean([
         v + (m - mu_tot)**2
         for v, m in zip(vars_, mus)
@@ -71,9 +72,7 @@ if __name__ == '__main__':
     print("avg with xarray", mu_tot)
     print("std with xarray", sigma)
 
-    # print to file at the same level of the data path
-    # get file name base name from data path, remove .txt from name
-    # save file as stat.filename (minus extension).txt
+    # section - print to file
     base_name = os.path.basename(args.file_path)
     name_without_ext = os.path.splitext(base_name)[0]
     stat_file_name = f"stat.{name_without_ext}.txt"

@@ -11,9 +11,6 @@ def parse_input_parameters():
     parser = argparse.ArgumentParser(
         description="Split the dataset into train and test files."
     )
-    # parse following arguments:
-    # -data_path (string): path of the data files (mandatory)
-    # -variable name (string): variable to extract from the data files (mandatory)
     parser.add_argument("-dp", "--file-path", required=True, help="Path of the file list")
     parser.add_argument("-v", "--variable", required=True, help="Variable to extract from the data files")
     parser.add_argument("-n", type=int, default=None, help="Maximum number of files to process")
@@ -27,7 +24,6 @@ def parse_input_parameters():
 
 if __name__ == '__main__':
 
-    print("Hello World!")
     args = parse_input_parameters()
     print(f"File path: {args.file_path}")
     print(f"Variable: {args.variable}")

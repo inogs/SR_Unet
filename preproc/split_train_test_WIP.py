@@ -5,7 +5,8 @@ import argparse
 import re
 
 def extract_year_and_season(s):
-    groups = re.findall(r"\d+", s)
+    file_name = os.path.basename(s)
+    groups = re.findall(r"\d+", file_name)
     if len(groups) < 2:
         return (None, None)
     return groups[-2], groups[-1]
@@ -21,8 +22,10 @@ def get_file_list(source_dir:str, test_size:float, val_size:float) -> (List[str]
     seed = 42
     random.seed(seed)
 
+    source_dir = os.path.abspath(source_dir)
+
     file_list = sorted(
-        [f for f in os.listdir(source_dir) if os.path.isfile(os.path.join(source_dir, f)) if extract_year_and_season(f) != (None, None)],
+        [os.path.join(source_dir, f) for f in os.listdir(source_dir) if os.path.isfile(os.path.join(source_dir, f)) if extract_year_and_season(f) != (None, None)],
         key=file_sort_key,
     )
 
@@ -51,7 +54,6 @@ def get_file_list(source_dir:str, test_size:float, val_size:float) -> (List[str]
         l = seasons[ssn]
         remaining_files = [f for f in l if f not in test_file_list]
         num_files = min(len(remaining_files), max(1, int(len(remaining_files) * val_size)))
-        # print(f"Season: {ssn}, Remaining files: {len(remaining_files)}, Val files to select: {num_files}")
         random_files = random.sample(remaining_files, num_files)
         val_file_list += random_files
 

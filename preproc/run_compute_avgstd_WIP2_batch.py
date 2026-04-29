@@ -6,7 +6,7 @@ import sys
 
 # Edit these values directly in the script.
 TXT_ROOT = Path("/leonardo_scratch/large/userexternal/gzuccari/NARF_nc")
-COMPUTE_SCRIPT = Path("/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/preproc/compute_avgstd_WIP2.py")
+COMPUTE_SCRIPT = Path("/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/preproc/compute_avgstd_WIP3.py")
 MAX_FILES = None
 JOBS = 8
 RECURSIVE = False

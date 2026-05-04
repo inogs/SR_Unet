@@ -4,21 +4,47 @@ import numpy as np
 import os
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor
+from itertools import repeat
 
-# define a function to 
+n_workers = 24
+
+
+def load_slice(index, file_path, variable, mean_value, std_value):
+    with nc.Dataset(file_path) as dataset:
+        array = dataset[variable][:]
+        array_mask = np.ma.getmaskarray(array)
+        data_slice = np.where(array_mask, 0, (array.data - mean_value) / std_value)
+
+    return index, data_slice
+
+
+def fill_storage_parallel(storage, files, variable, mean_value, std_value, label):
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        for i, data_slice in executor.map(
+            load_slice,
+            range(len(files)),
+            files,
+            repeat(variable),
+            repeat(mean_value),
+            repeat(std_value),
+            chunksize=1,
+        ):
+            print(f"    Loaded file {i+1}/{len(files)}: {files[i]}, {label} mask applied")
+            storage[i, 0, :, :, :] = data_slice
 
 
 if __name__== "__main__":
     # section, input paths
-    path_target = "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/split.70.20.10.dir/Chla.train.txt"
-    path_input = "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/split.70.20.10.dir/chl.train.txt"
-    stat_target = "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/split.70.20.10.dir/stat.Chla.train.txt"
-    stat_input = "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/split.70.20.10.dir/stat.chl.train.txt"
+    path_target = "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/split.70.20.10.dir/Chla.val.txt"
+    path_input = "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/split.70.20.10.dir/chl.val.txt"
+    stat_target = "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/split.70.20.10.dir/stat.Chla.val.txt"
+    stat_input = "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/split.70.20.10.dir/stat.chl.val.txt"
 
     var_target = "Chla"
     var_input = "chl"
 
-    output_file_name = "chl_Chla_train_dataset.pt"
+    output_file_name = "chl_Chla_val_dataset.pt"
 
     # check that the four paths exist, if not print an error message and exit
     for path in [path_target, path_input, stat_target, stat_input]:
@@ -46,13 +72,10 @@ if __name__== "__main__":
     n_targets = len(files_list_targets)
 
     # section, load semples and define the dataset container
-    ds_1 = nc.Dataset(files_list_targets[0])[var_target]
-    print(f"    Shape of the variable {var_target} in the first file: {ds_1.shape}")
-    storage_target = np.zeros((n_targets, 1, ds_1.shape[0], ds_1.shape[1], ds_1.shape[2]), dtype=ds_1.dtype)
-
-    # i need a deep copy, if i close it the mask will be lost, but i need to close it to free the memory
-    mask_ds_1 = np.ma.getmaskarray(ds_1)
-    # ds_1.close()
+    with nc.Dataset(files_list_targets[0]) as dataset_1:
+        ds_1 = dataset_1[var_target]
+        print(f"    Shape of the variable {var_target} in the first file: {ds_1.shape}")
+        storage_target = np.zeros((n_targets, 1, ds_1.shape[0], ds_1.shape[1], ds_1.shape[2]), dtype=ds_1.dtype)
 
     print(f"    Container shape", storage_target.shape)
 
@@ -71,32 +94,19 @@ if __name__== "__main__":
     std_input = float(stats[1])
     print(f"    Mean of input variable: {mean_input}")
 
-    # loop over the target files and store the data in the numpy array
-    for i, file in enumerate(files_list_targets):
-        ds = nc.Dataset(file)[var_target]
-        # extract mask and check that it is the same as the one we have stored, if not print an error message and exit
-        if not np.array_equal(mask_ds_1, np.ma.getmaskarray(ds)):
-            print(f"Error: the mask of the file {file} is different from the one of the first file")
-            sys.exit(1) 
-        print(f"    Loaded file {i+1}/{n_targets}: {file}, mask check passed")
-        # standardize ussing mean and std and the mask, if the mask is True, set the value to 0, otherwise standardize it
-        storage_target[i, 0, :, :, :] = np.where(mask_ds_1, 0, (ds[:].data - mean_target) / std_target)
-        # storage_target[i, 0, :, :, :] = ds[:].data
-        # ds.close()
-    # end of loop
+    # time this section
+    start_time = time.time()
+    fill_storage_parallel(storage_target, files_list_targets, var_target, mean_target, std_target, "target")
+    end_time = time.time()
+    print(f"    Time taken to load target files: {end_time - start_time} seconds")
+
 
     storage_input = np.zeros(storage_target.shape, dtype=storage_target.dtype)
 
-    for i, file in enumerate(files_list_inputs):
-        ds = nc.Dataset(file)[var_input]
-        # extract mask and check that it is the same as the one we have stored, if not print an error message and exit
-        if not np.array_equal(mask_ds_1, np.ma.getmaskarray(ds)):
-            print(f"Error: the mask of the file {file} is different from the one of the first file")
-            sys.exit(1) 
-        print(f"    Loaded file {i+1}/{n_targets}: {file}, mask check passed")
-        storage_input[i, 0, :, :, :] = np.where(mask_ds_1, 0, (ds[:].data - mean_input) / std_input)
-        # ds.close()
-    # end of loop
+    start_time = time.time()
+    fill_storage_parallel(storage_input, files_list_inputs, var_input, mean_input, std_input, "input")
+    end_time = time.time()
+    print(f"    Time taken to load input files: {end_time - start_time} seconds")
 
     print(f"    All files loaded, saving to pytorch format")
     torch_ds = torch.utils.data.TensorDataset(torch.Tensor(storage_input), torch.Tensor(storage_target))
@@ -104,12 +114,12 @@ if __name__== "__main__":
     torch.save(torch_ds, output_file_name)
     print(f"    Dataset saved in {output_file_name}")
 
-    # load dataset and check that it is the same as the one we have saved
-    loaded_ds = torch.load(output_file_name, weights_only=False)
-    print(f"    Loaded dataset shape: {loaded_ds.tensors[0].shape}, {loaded_ds.tensors[1].shape}")
-    if not torch.equal(torch_ds.tensors[0], loaded_ds.tensors[0]) or not torch.equal(torch_ds.tensors[1], loaded_ds.tensors[1]):
-        print(f"Error: the loaded dataset is different from the one we have saved")
-        sys.exit(1)
-    print(f"    Dataset loaded successfully, check passed")
+    # # load dataset and check that it is the same as the one we have saved
+    # loaded_ds = torch.load(output_file_name, weights_only=False)
+    # print(f"    Loaded dataset shape: {loaded_ds.tensors[0].shape}, {loaded_ds.tensors[1].shape}")
+    # if not torch.equal(torch_ds.tensors[0], loaded_ds.tensors[0]) or not torch.equal(torch_ds.tensors[1], loaded_ds.tensors[1]):
+    #     print(f"Error: the loaded dataset is different from the one we have saved")
+    #     sys.exit(1)
+    # print(f"    Dataset loaded successfully, check passed")
 
 

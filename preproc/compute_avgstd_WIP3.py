@@ -3,8 +3,9 @@ import os
 import time
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Manager
+import netCDF4 as nc
 import numpy as np
-import xarray as xr
+import numpy.ma as ma
 
 
 WORKER_ID = None
@@ -46,14 +47,14 @@ def read_file_list(path, n=None):
 
 
 def file_stats(path, variable):
-    with xr.open_dataset(path) as ds:
-        if variable not in ds:
+    with nc.Dataset(path) as ds:
+        if variable not in ds.variables:
             raise KeyError(f"{variable} not found in {path}")
 
-        x = ds[variable]
+        array = ds[variable][:]
 
-        mu = x.mean(skipna=True).item()
-        var = x.var(skipna=True).item()
+        mu = float(ma.mean(array))
+        var = float(ma.var(array))
 
     return mu, var
 

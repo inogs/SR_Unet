@@ -4,7 +4,6 @@ import time
 import netCDF4 as nc
 import numpy as np
 import numpy.ma as ma
-import xarray as xr
 
 def parse_input_parameters():
 
@@ -44,19 +43,27 @@ if __name__ == '__main__':
     end_time = time.time()
     print(f"Time taken to read file list: {end_time - start_time} seconds for {len(files)} files")
 
-    # section - compute file-wise mean and var with xarray
+    # section - compute file-wise mean and var with netCDF4 on masked data
     start_time = time.time()
+
+
+
     for counter, dataset_path in enumerate(files, start=1):
         print(f"Processing file {counter}/{len(files)}: {dataset_path}")
-        with xr.open_dataset(dataset_path) as dataset:
-            x = dataset[args.variable]
-            mus.append(x.mean().item())
-            vars_.append(x.var().item())
+        with nc.Dataset(dataset_path) as dataset:
+            # check if variable exists in dataset
+            if args.variable not in dataset.variables:
+                print(f"Variable {args.variable} not found in {dataset_path}, skipping.")
+                continue
+            array = dataset[args.variable][:]
+            mus.append(float(ma.mean(array)))
+            vars_.append(float(ma.var(array)))
+    
     end_time = time.time()
-    print(f"Time taken to compute file-wise mean and var with xarray: {end_time - start_time} seconds")
+    print(f"Time taken to compute file-wise mean and var with netCDF4: {end_time - start_time} seconds")
 
 
-    # section - compute average and std with xarray
+    # section - compute average and std
     start_time = time.time()
     mu_tot = np.mean(mus)
     sigma = np.sqrt(np.mean([
@@ -64,9 +71,9 @@ if __name__ == '__main__':
         for v, m in zip(vars_, mus)
     ]))
     end_time = time.time()
-    print(f"Time taken to compute average and std with xarray: {end_time - start_time} seconds")
-    print("avg with xarray", mu_tot)
-    print("std with xarray", sigma)
+    print(f"Time taken to compute average and std: {end_time - start_time} seconds")
+    print("avg", mu_tot)
+    print("std", sigma)
 
     # section - print to file
     base_name = os.path.basename(args.file_path)

@@ -5,7 +5,7 @@ import os
 import sys
 import time
 
-# define main
+# define a function to 
 
 
 if __name__== "__main__":
@@ -18,7 +18,7 @@ if __name__== "__main__":
     var_target = "Chla"
     var_input = "chl"
 
-    output_file_name = "Chla_chl_train_dataset.pt"
+    output_file_name = "chl_Chla_train_dataset.pt"
 
     # check that the four paths exist, if not print an error message and exit
     for path in [path_target, path_input, stat_target, stat_input]:
@@ -99,7 +99,7 @@ if __name__== "__main__":
     # end of loop
 
     print(f"    All files loaded, saving to pytorch format")
-    torch_ds = torch.utils.data.TensorDataset(torch.Tensor(storage_target), torch.Tensor(storage_input))
+    torch_ds = torch.utils.data.TensorDataset(torch.Tensor(storage_input), torch.Tensor(storage_target))
     print(f"    Dataset shape: {torch_ds.tensors[0].shape}, {torch_ds.tensors[1].shape}")
     torch.save(torch_ds, output_file_name)
     print(f"    Dataset saved in {output_file_name}")

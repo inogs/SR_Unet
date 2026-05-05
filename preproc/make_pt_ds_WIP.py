@@ -4,10 +4,93 @@ import numpy as np
 import os
 import sys
 import time
+import json
+import argparse
 from concurrent.futures import ProcessPoolExecutor
 from itertools import repeat
+from types import SimpleNamespace
 
-n_workers = 24
+
+def parse_input_parameters():
+
+    parser = argparse.ArgumentParser(
+        description="Produce a torch dataset from config file."
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        default=os.path.join(os.path.dirname(__file__), "conf.json"),
+        help="Path to configuration file.",
+    )
+    args = parser.parse_args()
+
+    return args
+
+
+def read_file_list(file_path):
+    files = []
+    with open(file_path, 'r') as f:
+        for i, line in enumerate(f):
+            files.append(line.strip())
+    return files
+
+
+def read_stats_file(stat_path):
+    with open(stat_path, 'r') as f:
+        stats = [line.strip() for line in f if line.strip()]
+    mean_value = float(stats[0])
+    std_value = float(stats[1])
+    return mean_value, std_value
+
+
+def validate_conf_file_path(conf_path):
+    if not os.path.exists(conf_path):
+        raise FileNotFoundError(f"Configuration file not found: {conf_path}")
+    if not os.path.isfile(conf_path):
+        raise ValueError(f"Configuration path is not a file: {conf_path}")
+    print(f"Configuration path check: passed")
+    print(f"    Configuration path: {conf_path}")
+
+
+def validate_conf(conf):
+    required_path_fields = [
+        "path_target",
+        "path_input",
+        "stat_target",
+        "stat_input",
+    ]
+    required_fields = required_path_fields + [
+        "var_target",
+        "var_input",
+        "output_path",
+        "output_file_name",
+        "n_workers",
+    ]
+
+    for field_name in required_fields:
+        if not hasattr(conf, field_name):
+            raise AttributeError(f"Missing configuration field: {field_name}")
+
+    for field_name in required_path_fields:
+        field_value = getattr(conf, field_name)
+        if not isinstance(field_value, str) or not field_value.strip():
+            raise ValueError(f"Configuration field must be a non-empty path string: {field_name}")
+
+    for path in [conf.path_target, conf.path_input, conf.stat_target, conf.stat_input]:
+        if not os.path.exists(path):
+            print(f"Error: the path {path} does not exist")
+            sys.exit(1)
+        else:
+            print(f"    Path {path} exists, check passed")
+
+    print("Configuration file check: passed")
+    for field_name, field_value in sorted(vars(conf).items()):
+        print(f"    {field_name}: {field_value}")
+
+
+def read_conf_file(conf_path):
+    with open(conf_path, 'r') as f:
+        return json.load(f, object_hook=lambda data: SimpleNamespace(**data))
 
 
 def load_slice(index, file_path, variable, mean_value, std_value):
@@ -19,7 +102,7 @@ def load_slice(index, file_path, variable, mean_value, std_value):
     return index, data_slice
 
 
-def fill_storage_parallel(storage, files, variable, mean_value, std_value, label):
+def fill_storage_parallel(storage, files, variable, mean_value, std_value, label, n_workers):
     with ProcessPoolExecutor(max_workers=n_workers) as executor:
         for i, data_slice in executor.map(
             load_slice,
@@ -35,91 +118,49 @@ def fill_storage_parallel(storage, files, variable, mean_value, std_value, label
 
 
 if __name__== "__main__":
-    # section, input paths
-    path_target = "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/split.70.20.10.dir/Chla.val.txt"
-    path_input = "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/split.70.20.10.dir/chl.val.txt"
-    stat_target = "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/split.70.20.10.dir/stat.Chla.val.txt"
-    stat_input = "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/split.70.20.10.dir/stat.chl.val.txt"
 
-    var_target = "Chla"
-    var_input = "chl"
+    args = parse_input_parameters()
+    validate_conf_file_path(args.config)
+    conf = read_conf_file(args.config)
+    validate_conf(conf)
 
-    output_file_name = "chl_Chla_val_dataset.pt"
-
-    # check that the four paths exist, if not print an error message and exit
-    for path in [path_target, path_input, stat_target, stat_input]:
-        if not os.path.exists(path):
-            print(f"Error: the path {path} does not exist")
-            sys.exit(1)
-        else:
-            print(f"    Path {path} exists, check passed")
-
-    # section, load file lists and check that they have the same length
-
-    # time this section
-    start_time = time.time()
-    with open(path_target, 'r') as f:
-        files_list_targets = [line.strip() for line in f if line.strip()]
-    with open(path_input, 'r') as f:
-        files_list_inputs = [line.strip() for line in f if line.strip()]
-    if len(files_list_targets) != len(files_list_inputs):
-        print("Error: the two lists have different lengths")
-        sys.exit(1)
-    end_time = time.time()
-    print(f"    Time taken to load file lists: {end_time - start_time} seconds")
-    print(f"    Number of files in target list: {len(files_list_targets)}")
-    print(f"    Number of files in input list: {len(files_list_inputs)}")
+    files_list_targets = read_file_list(conf.path_target)
+    files_list_inputs = read_file_list(conf.path_input)
     n_targets = len(files_list_targets)
+    print(f"Number of samples to be written on file: {n_targets}")
 
     # section, load semples and define the dataset container
-    with nc.Dataset(files_list_targets[0]) as dataset_1:
-        ds_1 = dataset_1[var_target]
-        print(f"    Shape of the variable {var_target} in the first file: {ds_1.shape}")
-        storage_target = np.zeros((n_targets, 1, ds_1.shape[0], ds_1.shape[1], ds_1.shape[2]), dtype=ds_1.dtype)
-
+    dataset_1 = nc.Dataset(files_list_targets[0])
+    ds_1 = dataset_1[conf.var_target]
+    print(f"    Shape of the variable {conf.var_target} in the first file: {ds_1.shape}")
+    storage_target = np.zeros((n_targets, 1, ds_1.shape[0], ds_1.shape[1], ds_1.shape[2]), dtype=ds_1.dtype)
+    storage_input = np.zeros(storage_target.shape, dtype=storage_target.dtype)
+    dataset_1.close()
+    del ds_1
     print(f"    Container shape", storage_target.shape)
 
-    # section, load statistics and print them, first one is mean, second one is std
-    with open(stat_target, 'r') as f:
-        stats = [line.strip() for line in f if line.strip()]
-    mean_target = float(stats[0])
-    std_target = float(stats[1])
+    # section, load statistics
+    mean_target, std_target = read_stats_file(conf.stat_target)
     print(f"    Mean of target variable: {mean_target}")
     print(f"    Std of target variable: {std_target}")
 
-    # read statistics for input variable, but we will not use them, just print them
-    with open(stat_input, 'r') as f:
-        stats = [line.strip() for line in f if line.strip()]
-    mean_input = float(stats[0])
-    std_input = float(stats[1])
+    mean_input, std_input = read_stats_file(conf.stat_input)
     print(f"    Mean of input variable: {mean_input}")
+    print(f"    Std of input variable: {std_input}")
 
-    # time this section
+    # section, fill storages
     start_time = time.time()
-    fill_storage_parallel(storage_target, files_list_targets, var_target, mean_target, std_target, "target")
+    fill_storage_parallel(storage_target, files_list_targets, conf.var_target, mean_target, std_target, "target", conf.n_workers)
+    fill_storage_parallel(storage_input, files_list_inputs, conf.var_input, mean_input, std_input, "input", conf.n_workers)
     end_time = time.time()
-    print(f"    Time taken to load target files: {end_time - start_time} seconds")
-
-
-    storage_input = np.zeros(storage_target.shape, dtype=storage_target.dtype)
-
-    start_time = time.time()
-    fill_storage_parallel(storage_input, files_list_inputs, var_input, mean_input, std_input, "input")
-    end_time = time.time()
-    print(f"    Time taken to load input files: {end_time - start_time} seconds")
+    print(f"    Time taken to load target and input files: {end_time - start_time} seconds")
 
     print(f"    All files loaded, saving to pytorch format")
     torch_ds = torch.utils.data.TensorDataset(torch.Tensor(storage_input), torch.Tensor(storage_target))
     print(f"    Dataset shape: {torch_ds.tensors[0].shape}, {torch_ds.tensors[1].shape}")
-    torch.save(torch_ds, output_file_name)
-    print(f"    Dataset saved in {output_file_name}")
-
-    # # load dataset and check that it is the same as the one we have saved
-    # loaded_ds = torch.load(output_file_name, weights_only=False)
-    # print(f"    Loaded dataset shape: {loaded_ds.tensors[0].shape}, {loaded_ds.tensors[1].shape}")
-    # if not torch.equal(torch_ds.tensors[0], loaded_ds.tensors[0]) or not torch.equal(torch_ds.tensors[1], loaded_ds.tensors[1]):
-    #     print(f"Error: the loaded dataset is different from the one we have saved")
-    #     sys.exit(1)
-    # print(f"    Dataset loaded successfully, check passed")
+    os.makedirs(conf.output_path, exist_ok=True)
+    output_file_path = os.path.join(conf.output_path, conf.output_file_name)
+    torch.save(torch_ds, output_file_path)
+    print(f"    Dataset saved in {output_file_path}")
 
 

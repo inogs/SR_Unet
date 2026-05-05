@@ -1,0 +1,286 @@
+# NB!!!!dato che il processo se si ferma riprende dall ultimo file creato non controlla se il file che è stato interrotto ha tutti i dati validi e può essere che interropendolo 
+# l'ultimo file venga creato male. sarebbe da nominare il file inizialmente con un nome es chl_2007-009.pippo e poi una volta che viene concluso il processo fare mv 
+# e rinominarlo con il nome corretto (senza pippo) perchè se si interrompe il processo e c'è un file chiamato pipppo nella cartella sai che potrebbe essere un file danneggiato e quindi deve essere rifatto
+# infatti se fai un mv dentro lo stesso sistema (penso si intenda nella stessa cartella) non c'è un momento intermedio tra .pippo e mv e quindi sai che se viene sposttato allora il processo era sicuramente terminato correttamente e il file non è danneggiato 
+
+
+import os
+import glob
+import sys
+import json
+import netCDF4 as nc
+import numpy as np
+import numpy.ma as ma
+from typing import Dict
+from alive_progress import alive_bar
+from scipy.interpolate import RegularGridInterpolator, interpn, make_interp_spline, griddata
+from scipy.interpolate import NearestNDInterpolator
+import scipy.interpolate as intrp
+
+
+from mpi4py import MPI
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+n_processes = comm.Get_size()
+print('rank:', rank)
+
+
+
+def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid):
+    
+    # trasformiamo in nan i valori invalidi --> mettere questo oppure valid_mask in tmp_lin sembra uguale, forse anche uguale a non mettere nulla (?)
+    # values2interp = values2interp.astype(np.float64)
+    # values2interp = np.where(values2interp > 1e20, np.nan, values2interp)
+
+
+    new_lon = new_grid['longitude'][:]
+    new_lat = new_grid['latitude'][:]
+    new_dep = new_grid['depth'][:]
+
+    new_data = new_grid[var_grid][:]
+    new_mask = np.ma.masked_invalid(new_data).mask
+
+    masked_data = np.ma.masked_invalid(values2interp)   # Mask an array where invalid values occur (NaNs or infs).
+    # Create a mask of valid (non-masked) points
+    valid_mask = ~masked_data.mask
+    
+    assert values2interp.shape == (len(old_dep), len(old_lat), len(old_lon))
+
+    n_dep_old = (len(old_dep) -2 ) # per togliere gli ultimi due layer 
+    n_lat_new = len(new_lat)
+    n_lon_new = len(new_lon)
+
+    # griglie
+    LAT_new, LON_new = np.meshgrid(new_lat, new_lon, indexing="ij")
+    LAT_old, LON_old = np.meshgrid(old_lat, old_lon, indexing="ij")
+
+    points_new = np.column_stack([LAT_new.ravel(), LON_new.ravel()])
+
+    # STEP 1: LINEAR and NEAR
+    tmp_lin = np.empty((n_dep_old, n_lat_new, n_lon_new))
+    tmp_nn = np.empty_like(tmp_lin)
+
+
+    for k in range(n_dep_old):
+        # STEP 1.1: LINEAR
+        tmp_lin[k] = interpn(
+            (old_lat, old_lon),
+            values2interp[k],
+            points_new,
+            method="linear",
+            bounds_error=False,
+            fill_value=np.nan
+        ).reshape(n_lat_new, n_lon_new)
+
+        # STEP 1.2: NEAREST
+        slice_data = masked_data[k]
+
+        mask = valid_mask[k]
+        values_valid = slice_data[mask]
+
+        points_valid = np.column_stack([
+            LAT_old[mask],
+            LON_old[mask]
+        ])
+
+        tmp_nn[k] = griddata(
+            points_valid,
+            values_valid,
+            points_new,
+            method="nearest"
+        ).reshape(n_lat_new, n_lon_new)
+
+
+    # STEP 3: MERGE
+    tmp_lin[tmp_lin > 1e20] = np.nan
+
+    problem_depths = np.where(np.isnan(tmp_nn).reshape(n_dep_old, -1).any(axis=1))[0]
+
+    print("\n DEPTH CON NaN IN tmp_nn:", problem_depths)
+
+    tmp = np.where(np.isnan(tmp_lin), tmp_nn, tmp_lin)
+
+    print('sum nan in tmp lin',np.sum(np.isnan(tmp_lin)))
+    print('sum nan in tmp nn',np.sum(np.isnan(tmp_nn)))
+    print(f"Max in tmp nn: {np.nanmax(tmp_nn)}")
+    print(f"Max in tmp lin: {np.nanmax(tmp_lin)}")
+
+
+    # STEP 4: VERTICALE
+    out = np.empty((len(new_dep), n_lat_new, n_lon_new))
+    old_dep = old_dep[:-2]
+
+
+    for i in range(n_lat_new):
+        for j in range(n_lon_new):
+
+            profile = tmp[:, i, j]
+            spline = make_interp_spline(
+                old_dep,
+                profile,
+                k=1
+            )
+
+            y = spline(new_dep)
+
+            # boundary
+            y[new_dep < old_dep.min()] = profile[0]
+            y[new_dep > old_dep.max()] = profile[-1]
+
+            out[:, i, j] = y
+
+    # STEP 5: MASK FINALE
+    interp_data = ma.masked_array(
+        out,
+        mask=new_mask,
+        fill_value=1e20,
+        dtype=np.float32
+    )
+
+    return interp_data
+
+
+
+def interpolate_data(cms_name: str, input_path: str, output_path: str, grid_file: str, var_grid:str, n_dim: int = 3) -> None:
+    '''
+        Performs the interpolation of a given variable and saves the results into a different folder.
+
+        Args:
+            cms_name (str): variable name in the Copernicus Marine format.
+            input_path (str): directory containing Copernicus Marine data.
+            output_path (str): directory where the interpolated files are saved
+            grid_file (str): path to thethe NetCDF file that contains the grid for interpolation.
+            var_grid (str): variable in the grid file of which we want to copy the shape
+            n_dim (int): number of dimensions of the data; def 3 (dep, lat, lon)
+    '''
+
+
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    # Open the grid file to get the new dimensions
+    with nc.Dataset(grid_file, "r") as grid_nc:
+        new_longitudes = grid_nc['longitude'][:]
+        new_latitudes = grid_nc['latitude'][:]  # New latitude and longitude values
+        new_depth = grid_nc['depth'][:]
+
+        data_files = tuple(glob.glob(os.path.join(input_path, "*.nc")))
+
+        assigned_data_files = data_files[rank::n_processes]
+
+        with alive_bar(0, title=f"Interpolating raw CMS data...") as bar:
+            # Iterate over the NetCDF files in the source directory
+            for file_path in assigned_data_files:
+                # Open the original NetCDF file for reading
+                with nc.Dataset(file_path, "r") as source_nc:
+                    source_file_name = os.path.basename(file_path)
+                    source_ds = nc.Dataset(file_path)
+                    old_lon = source_ds['longitude'][:]
+                    old_lat = source_ds['latitude'][:]
+                    old_dep = source_ds['depth'][:]
+                    old_data = source_ds[cms_name][:]
+                    # Define the path for the modified version in the destination directory
+                    new_file_path = os.path.join(output_path, source_file_name)
+                    if not os.path.exists(new_file_path):
+                    # Create a new NetCDF file for writing
+                        with nc.Dataset(new_file_path, "w") as dest_nc:
+                            # Create dimensions in the new file based on the interpolated grid
+                            dest_nc.createDimension("depth", len(new_depth))
+                            dest_nc.createDimension("longitude", len(new_longitudes))
+                            dest_nc.createDimension("latitude", len(new_latitudes))
+
+                            # Create depth, latitude, and longitude variables in the new file
+                            dest_depth = dest_nc.createVariable("depth", new_depth.dtype, ("depth",))
+                            dest_longitudes = dest_nc.createVariable("longitude", new_longitudes.dtype, ("longitude",))
+                            dest_latitudes = dest_nc.createVariable("latitude", new_latitudes.dtype, ("latitude",))
+
+                            # Write the new depth, latitude, and longitude values
+                            dest_depth[:] = new_depth
+                            dest_longitudes[:] = new_longitudes
+                            dest_latitudes[:] = new_latitudes
+
+                            # Perform interpolation
+                            interpolated_array = interpolate_3d(old_data, old_lon, old_lat, old_dep, grid_nc, var_grid)
+                            # Create a variable in the new file and write the interpolated array
+                            spatial_dim = ( "depth", "latitude", "longitude")
+                            dest_array = dest_nc.createVariable(cms_name, interpolated_array.dtype, spatial_dim)
+                            dest_array[:] = interpolated_array
+
+                            # Copy global attributes from the original file
+                            dest_nc.setncatts(source_nc.__dict__)
+
+                            # global attrs
+                            dest_nc.setncatts(source_nc.__dict__)
+                        print(f"Created {new_file_path}")
+                    else:
+                        print(f"{new_file_path} have already been created")
+                    bar()
+
+
+
+
+
+
+if __name__ == "__main__":
+    '''
+        Interpolates the files present in the source directory (with Copernicus Marine files)
+        to match the dimensions with those of the files in the target directory (with CADEAU files).
+        All the files referring to given variable are assumed to be in a directory named as the variable.
+
+        Parameters:
+        -ip string with the input path (excluded vairable specific dir)
+        -op string with the output path (excluded variable specific dir)
+        -gp string with the path to a file with the target grid of interpolation
+        -vgp string with the var in the gp file
+        -v set of variables to interpolate
+    '''
+    i = 1
+    var_list = []
+    input_path = None
+    output_path = None
+    grid_file_path = None
+    var_grid_path = None
+
+    while i < len(sys.argv):
+        if sys.argv[i] == "-ip":
+            if input_path is not None: raise ValueError("Repeated input for input path")
+            input_path = sys.argv[i+1]
+            i += 2
+        elif sys.argv[i] == "-op":
+            if output_path is not None: raise ValueError("Repeated input for output path")
+            output_path = sys.argv[i+1]
+            i += 2
+        elif sys.argv[i] == "-gp":
+            if grid_file_path is not None: raise ValueError("Repeated input for output path")
+            grid_file_path = sys.argv[i+1]
+            i += 2
+        elif sys.argv[i] == "-vgp":
+            if var_grid_path is not None: raise ValueError("Repeated input for output path")
+            var_grid_path = sys.argv[i+1]
+            i += 2
+        elif sys.argv[i] == "-v":
+            if var_list != []: raise ValueError("Repeated input for variable")
+            while i < len(sys.argv) - 1:
+                if not sys.argv[i+1].startswith('-'):
+                    var_list.append(sys.argv[i+1])
+                    i += 1
+                else:
+                    break
+            i += 1
+        else:
+            i += 1
+
+    if input_path is None: raise TypeError("Missing value for input path")
+    if output_path is None: raise TypeError("Missing value for output path")
+    if grid_file_path is None: raise TypeError("Missing value for grid file path")
+
+    if var_list == []: raise TypeError("Missing value for variable")
+    if var_grid_path == None: raise TypeError("Missing value for grid variable")
+
+    # Path to the file containing the grid to be used for interpolation
+
+    for var in var_list:
+        print(f"[interpolate_cms for variable '{var}'] Starting execution")
+        interpolate_data(var, os.path.join(input_path, var), os.path.join(output_path, var), grid_file_path, var_grid_path, n_dim=3)
+        print(f"[interpolate_cms for variable '{var}'] Ending execution")

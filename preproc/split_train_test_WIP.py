@@ -3,6 +3,8 @@ from typing import List
 import random
 import argparse
 import re
+import json
+from types import SimpleNamespace
 
 def extract_year_and_season(s):
     file_name = os.path.basename(s)
@@ -17,9 +19,7 @@ def file_sort_key(file_name: str):
     return int(year), int(season), file_name
 
 
-def get_file_list(source_dir:str, test_size:float, val_size:float) -> (List[str], List[str],List[str]):
-    
-    seed = 42
+def get_file_list(source_dir:str, test_size:float, val_size:float, seed:int) -> (List[str], List[str],List[str]):
     random.seed(seed)
 
     source_dir = os.path.abspath(source_dir)
@@ -67,23 +67,87 @@ def get_file_list(source_dir:str, test_size:float, val_size:float) -> (List[str]
 def parse_input_parameters():
 
     parser = argparse.ArgumentParser(
-        description="Split the dataset into train and test files."
+        description="Split the dataset into train, validation and test files from a configuration file."
     )
-    parser.add_argument("-dp", "--data-path", required=True,
-                        help="Input dataset directory.")
-    parser.add_argument("-ts", "--test-size", required=True,
-                        type=lambda value: float(value) if 0.0 <= float(value) <= 1.0 else (_ for _ in ()).throw(argparse.ArgumentTypeError("Value must be between 0.0 and 1.0")),
-                        help="Fraction of data to reserve for test set, e.g. 0.2.")
-    parser.add_argument("-vs", "--validation-size", default=0.0,
-                        type=lambda value: float(value) if 0.0 <= float(value) <= 1.0 else (_ for _ in ()).throw(argparse.ArgumentTypeError("Value must be between 0.0 and 1.0")),
-                        help="Fraction of training data to use as validation, e.g. 0.1.")
+    parser.add_argument(
+        "-c",
+        "--config",
+        default=os.path.join(os.path.dirname(__file__), "conf_split.json"),
+        help="Path to split configuration file.",
+    )
+
     args = parser.parse_args()
+
+    if not os.path.exists(args.config):
+        raise FileNotFoundError(f"Configuration file not found: {args.config}")
+    if not os.path.isfile(args.config):
+        raise ValueError(f"Configuration path is not a file: {args.config}")
+    print("Configuration path check: passed")
+    print(f"    Configuration path: {args.config}")
 
     return args
 
+
+def read_conf_file(conf_path):
+    with open(conf_path, 'r') as f:
+        return json.load(f, object_hook=lambda data: SimpleNamespace(**data))
+
+
+def validate_conf(conf) -> None:
+    required_fields = [
+        "data_path",
+        "output_path",
+        "test_size",
+        "validation_size",
+        "seed",
+    ]
+
+    for field_name in required_fields:
+        if not hasattr(conf, field_name):
+            raise AttributeError(f"Missing configuration field: {field_name}")
+
+    if not os.path.exists(conf.data_path):
+        raise ValueError(f"Data path does not exist: {conf.data_path}")
+
+    if not os.path.exists(conf.output_path):
+        raise ValueError(f"Output path does not exist: {conf.output_path}")
+
+    if not 0.0 <= float(conf.test_size) <= 1.0:
+        raise ValueError(f"Test size must be between 0.0 and 1.0: {conf.test_size}")
+
+    if not 0.0 <= float(conf.validation_size) <= 1.0:
+        raise ValueError(f"Validation size must be between 0.0 and 1.0: {conf.validation_size}")
+
+    print(f"Data path: {conf.data_path}")
+    print(f"Output path: {conf.output_path}")
+    print(f"Test size: {conf.test_size}")
+    print(f"Validation size: {conf.validation_size}")
+    print(f"Seed: {conf.seed}")
+
+    if conf.test_size + conf.validation_size >= 1.0:
+        raise ValueError("Test size and validation size must sum to less than 1.0")
+
+    print(f"Train size: {1.0 - conf.test_size - conf.validation_size}")
+
+
+def format_split_size(value: float) -> str:
+    return f"{int(round(value * 10)):02d}"
+
+
+def build_output_folder_path(data_path: str, output_path: str, test_size: float, validation_size: float, seed: int) -> str:
+    input_folder_name = os.path.basename(os.path.normpath(data_path))
+    train_size = 1.0 - test_size - validation_size
+    split_folder_name = (
+        f"{input_folder_name}."
+        f"split."
+        f"{format_split_size(train_size)}."
+        f"{format_split_size(test_size)}."
+        f"{format_split_size(validation_size)}."
+        f"seed.{seed}"
+    )
+    return os.path.join(os.path.abspath(output_path), split_folder_name)
+
 def print_file_list(file_list:List[str], output_file_path:str ,output_file:str) -> None:
-    
-    # make sure input list is not empty
     if len(file_list) != 0:
         with open(os.path.join(output_file_path, output_file), 'w') as f:
             for file_path in file_list:
@@ -94,19 +158,18 @@ def print_file_list(file_list:List[str], output_file_path:str ,output_file:str) 
 if __name__ == '__main__':
    
     args = parse_input_parameters()
+    conf = read_conf_file(args.config)
+    validate_conf(conf)
 
-    print(f"Data path: {args.data_path}")
-    print(f"Test size: {args.test_size}")
-    print(f"Validation size: {args.validation_size}")
-
-    # check over sum of test and validation size
-    if args.test_size + args.validation_size >= 1.0:
-        raise ValueError("Test size and validation size must sum to less than 1.0")
-
-    print(f"Train size: {1.0 - args.test_size - args.validation_size}")
-
-    normalized_data_path = os.path.normpath(args.data_path)
-    output_folder_path = normalized_data_path
+    normalized_data_path = os.path.normpath(conf.data_path)
+    output_folder_path = build_output_folder_path(
+        data_path=normalized_data_path,
+        output_path=conf.output_path,
+        test_size=conf.test_size,
+        validation_size=conf.validation_size,
+        seed=conf.seed,
+    )
+    os.makedirs(output_folder_path, exist_ok=True)
 
     subfolders = [f.path for f in os.scandir(normalized_data_path) if f.is_dir()]
 
@@ -119,11 +182,16 @@ if __name__ == '__main__':
         val_file_name = f"{folder_name}.val.txt"
         test_file_name = f"{folder_name}.test.txt"
 
-        test_files_list, train_files_list, val_files_list = get_file_list(subfolder, args.test_size, args.validation_size)
+        test_files_list, train_files_list, val_files_list = get_file_list(
+            source_dir=subfolder,
+            test_size=conf.test_size,
+            val_size=conf.validation_size,
+            seed=conf.seed,
+        )
 
         print_file_list(train_files_list, output_file_path=output_folder_path, output_file=train_file_name)
-        print_file_list(val_files_list, output_file_path=output_folder_path, output_file=val_file_name)
-        print_file_list(test_files_list, output_file_path=output_folder_path, output_file=test_file_name)
+        print_file_list(val_files_list,   output_file_path=output_folder_path, output_file=val_file_name)
+        print_file_list(test_files_list,  output_file_path=output_folder_path, output_file=test_file_name)
         
         print(f"[ending processing subfolder: {subfolder}]")
     # end if

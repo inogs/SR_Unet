@@ -19,7 +19,7 @@ def parse_input_parameters():
     parser.add_argument(
         "-c",
         "--config",
-        default=os.path.join(os.path.dirname(__file__), "conf.json"),
+        default=os.path.join(os.path.dirname(__file__), "conf_make.json"),
         help="Path to configuration file.",
     )
     args = parser.parse_args()
@@ -126,6 +126,9 @@ if __name__== "__main__":
 
     files_list_targets = read_file_list(conf.path_target)
     files_list_inputs = read_file_list(conf.path_input)
+    # check that the number of target and input files match
+    if len(files_list_targets) != len(files_list_inputs):
+        raise ValueError(f"Number of target files ({len(files_list_targets)}) does not match number of input files ({len(files_list_inputs)})")
     n_targets = len(files_list_targets)
     print(f"Number of samples to be written on file: {n_targets}")
 

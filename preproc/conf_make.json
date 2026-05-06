@@ -1,11 +1,11 @@
 {
   "n_workers": 24,
-  "path_target": "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/split.70.20.10.dir/T.val.txt",
-  "path_input": "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/split.70.20.10.dir/thetao.val.txt",
+  "path_target": "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/split.70.20.10.dir/T.train.txt",
+  "path_input": "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/split.70.20.10.dir/thetao.train.txt",
   "stat_target": "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/split.70.20.10.dir/stat.T.train.txt",
   "stat_input": "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/split.70.20.10.dir/stat.thetao.train.txt",
   "var_target": "T",
   "var_input": "thetao",
   "output_path": "/leonardo_scratch/large/userexternal/gzuccari/new_files_pt.dir/",
-  "output_file_name": "thetao.T.val.dataset.pt"
+  "output_file_name": "thetao.T.train.dataset.pt"
 }

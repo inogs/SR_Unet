@@ -158,62 +158,59 @@ def interpolate_data(cms_name: str, input_path: str, output_path: str, grid_file
 
         assigned_data_files = data_files[rank::n_processes]
 
-        with alive_bar(0, title=f"Interpolating raw CMS data...") as bar:
             # Iterate over the NetCDF files in the source directory
-            for file_path in assigned_data_files:
-                # Open the original NetCDF file for reading
-                with nc.Dataset(file_path, "r") as source_nc:
-                    source_file_name = os.path.basename(file_path)
-                    source_ds = nc.Dataset(file_path)
-                    old_lon = source_ds['longitude'][:]
-                    old_lat = source_ds['latitude'][:]
-                    old_dep = source_ds['depth'][:]
-                    old_data = source_ds[cms_name][:]
-                    # Define the path for the modified version in the destination directory
-                    final_file_path = os.path.join(output_path, source_file_name)
-                    tmp_file_path = final_file_path + ".tmp"
-                    
-                    if not os.path.exists(final_file_path):
-                            # se esiste un tmp vecchio/danneggiato lo rimuovo
-                        if os.path.exists(tmp_file_path):
-                            print(f"Removing incomplete file: {tmp_file_path}")
-                            os.remove(tmp_file_path)
-                    # Create a new NetCDF file for writing
-                        with nc.Dataset(tmp_file_path, "w") as dest_nc:
-                            # Create dimensions in the new file based on the interpolated grid
-                            dest_nc.createDimension("depth", len(new_depth))
-                            dest_nc.createDimension("longitude", len(new_longitudes))
-                            dest_nc.createDimension("latitude", len(new_latitudes))
+        for file_path in assigned_data_files:
+            # Open the original NetCDF file for reading
+            with nc.Dataset(file_path, "r") as source_nc:
+                source_file_name = os.path.basename(file_path)
+                # perchè leggo di nuovo il file se l'ho già letto come source_nc ???????
+                # source_ds = nc.Dataset(file_path)
+                old_lon = source_nc['longitude'][:]
+                old_lat = source_nc['latitude'][:]
+                old_dep = source_nc['depth'][:]
+                old_data = source_nc[cms_name][:]
+                # Define the path for the modified version in the destination directory
+                final_file_path = os.path.join(output_path, source_file_name)
+                tmp_file_path = final_file_path + ".tmp"
+                
+                if not os.path.exists(final_file_path):
+                        # se esiste un tmp vecchio/danneggiato lo rimuovo
+                    if os.path.exists(tmp_file_path):
+                        print(f"Removing incomplete file: {tmp_file_path}")
+                        os.remove(tmp_file_path)
+                # Create a new NetCDF file for writing
+                    with nc.Dataset(tmp_file_path, "w") as dest_nc:
+                        # Create dimensions in the new file based on the interpolated grid
+                        dest_nc.createDimension("depth", len(new_depth))
+                        dest_nc.createDimension("longitude", len(new_longitudes))
+                        dest_nc.createDimension("latitude", len(new_latitudes))
 
-                            # Create depth, latitude, and longitude variables in the new file
-                            dest_depth = dest_nc.createVariable("depth", new_depth.dtype, ("depth",))
-                            dest_longitudes = dest_nc.createVariable("longitude", new_longitudes.dtype, ("longitude",))
-                            dest_latitudes = dest_nc.createVariable("latitude", new_latitudes.dtype, ("latitude",))
+                        # Create depth, latitude, and longitude variables in the new file
+                        dest_depth = dest_nc.createVariable("depth", new_depth.dtype, ("depth",))
+                        dest_longitudes = dest_nc.createVariable("longitude", new_longitudes.dtype, ("longitude",))
+                        dest_latitudes = dest_nc.createVariable("latitude", new_latitudes.dtype, ("latitude",))
 
-                            # Write the new depth, latitude, and longitude values
-                            dest_depth[:] = new_depth
-                            dest_longitudes[:] = new_longitudes
-                            dest_latitudes[:] = new_latitudes
+                        # Write the new depth, latitude, and longitude values
+                        dest_depth[:] = new_depth
+                        dest_longitudes[:] = new_longitudes
+                        dest_latitudes[:] = new_latitudes
 
-                            # Perform interpolation
-                            interpolated_array = interpolate_3d(old_data, old_lon, old_lat, old_dep, grid_nc, var_grid)
-                            # Create a variable in the new file and write the interpolated array
-                            spatial_dim = ( "depth", "latitude", "longitude")
-                            dest_array = dest_nc.createVariable(cms_name, interpolated_array.dtype, spatial_dim)
-                            dest_array[:] = interpolated_array
+                        # Perform interpolation
+                        interpolated_array = interpolate_3d(old_data, old_lon, old_lat, old_dep, grid_nc, var_grid)
+                        # Create a variable in the new file and write the interpolated array
+                        spatial_dim = ( "depth", "latitude", "longitude")
+                        dest_array = dest_nc.createVariable(cms_name, interpolated_array.dtype, spatial_dim)
+                        dest_array[:] = interpolated_array
 
-                            # Copy global attributes from the original file
-                            dest_nc.setncatts(source_nc.__dict__)
+                        # Copy global attributes from the original file
+                        dest_nc.setncatts(source_nc.__dict__)
 
-                            # global attrs
-                            dest_nc.setncatts(source_nc.__dict__)
-                           
-                            # rename 
-                        os.replace(tmp_file_path, final_file_path)
-                        print(f"Created {final_file_path}")
-                    else:
-                        print(f"{final_file_path} have already been created")
-                    bar()
+                        # rename 
+                    os.replace(tmp_file_path, final_file_path)
+                    print(f"Created {final_file_path}")
+                else:
+                    print(f"{final_file_path} have already been created")
+                
 
 
 

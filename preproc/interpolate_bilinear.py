@@ -1,9 +1,3 @@
-# NB!!!!dato che il processo se si ferma riprende dall ultimo file creato non controlla se il file che è stato interrotto ha tutti i dati validi e può essere che interropendolo 
-# l'ultimo file venga creato male. sarebbe da nominare il file inizialmente con un nome es chl_2007-009.pippo e poi una volta che viene concluso il processo fare mv 
-# e rinominarlo con il nome corretto (senza pippo) perchè se si interrompe il processo e c'è un file chiamato pipppo nella cartella sai che potrebbe essere un file danneggiato e quindi deve essere rifatto
-# infatti se fai un mv dentro lo stesso sistema (penso si intenda nella stessa cartella) non c'è un momento intermedio tra .pippo e mv e quindi sai che se viene sposttato allora il processo era sicuramente terminato correttamente e il file non è danneggiato 
-
-
 import os
 import glob
 import sys
@@ -29,11 +23,6 @@ print('rank:', rank)
 
 def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid):
     
-    # trasformiamo in nan i valori invalidi --> mettere questo oppure valid_mask in tmp_lin sembra uguale, forse anche uguale a non mettere nulla (?)
-    # values2interp = values2interp.astype(np.float64)
-    # values2interp = np.where(values2interp > 1e20, np.nan, values2interp)
-
-
     new_lon = new_grid['longitude'][:]
     new_lat = new_grid['latitude'][:]
     new_dep = new_grid['depth'][:]
@@ -181,10 +170,16 @@ def interpolate_data(cms_name: str, input_path: str, output_path: str, grid_file
                     old_dep = source_ds['depth'][:]
                     old_data = source_ds[cms_name][:]
                     # Define the path for the modified version in the destination directory
-                    new_file_path = os.path.join(output_path, source_file_name)
-                    if not os.path.exists(new_file_path):
+                    final_file_path = os.path.join(output_path, source_file_name)
+                    tmp_file_path = final_file_path + ".tmp"
+                    
+                    if not os.path.exists(final_file_path):
+                            # se esiste un tmp vecchio/danneggiato lo rimuovo
+                        if os.path.exists(tmp_file_path):
+                            print(f"Removing incomplete file: {tmp_file_path}")
+                            os.remove(tmp_file_path)
                     # Create a new NetCDF file for writing
-                        with nc.Dataset(new_file_path, "w") as dest_nc:
+                        with nc.Dataset(tmp_file_path, "w") as dest_nc:
                             # Create dimensions in the new file based on the interpolated grid
                             dest_nc.createDimension("depth", len(new_depth))
                             dest_nc.createDimension("longitude", len(new_longitudes))
@@ -212,9 +207,12 @@ def interpolate_data(cms_name: str, input_path: str, output_path: str, grid_file
 
                             # global attrs
                             dest_nc.setncatts(source_nc.__dict__)
-                        print(f"Created {new_file_path}")
+                           
+                            # rename 
+                        os.replace(tmp_file_path, final_file_path)
+                        print(f"Created {final_file_path}")
                     else:
-                        print(f"{new_file_path} have already been created")
+                        print(f"{final_file_path} have already been created")
                     bar()
 
 

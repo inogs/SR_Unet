@@ -1,0 +1,22 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --ntasks=20
+#SBATCH --cpus-per-task=1
+#SBATCH --time=00:10:00           # walltime (HH:MM:SS)
+#SBATCH --account=OGS23_PRACE_IT_1 # project/account
+#SBATCH --partition=dcgp_usr_prod # partition/queue
+#SBATCH --qos=dcgp_qos_dbg
+#SBATCH -J python.mpi            # job name
+#SBATCH -o %x-%j.out             # stdout file (%x=jobname, %j=jobid)
+#SBATCH -e %x-%j.err             # stderr file (%x=jobname, %j=jobid)
+
+echo "HOST: $(hostname)"
+echo "SLURM_NTASKS=$SLURM_NTASKS"
+
+source ~/.bashrc # questo attivera' conda
+conda activate torch_test # questo attivera' l'ambiente con torch e mpi4py
+
+export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi2.so
+
+# qui anna devi mettere il tuo eseguibile
+srun --mpi=pmi2 python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/interpolate_bilinear.py -ip /leonardo_work/OGS23_PRACE_IT_0/adelsavio/AdriaticNC -op /leonardo_work/OGS23_PRACE_IT_0/adelsavio/AdriaticNC_out/ -gp /leonardo_work/OGS23_PRACE_IT_0/adelsavio/NARF_nc/N1p/N1p_2007_004.nc -vgp N1p -v po4

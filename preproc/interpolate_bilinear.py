@@ -1,14 +1,11 @@
 import os
 import glob
 import sys
-import json
 import netCDF4 as nc
 import numpy as np
 import numpy.ma as ma
 from typing import Dict
-from alive_progress import alive_bar
-from scipy.interpolate import RegularGridInterpolator, interpn, make_interp_spline, griddata
-from scipy.interpolate import NearestNDInterpolator
+from scipy.interpolate import interpn, make_interp_spline, griddata
 import scipy.interpolate as intrp
 
 
@@ -27,32 +24,36 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
     new_lat = new_grid['latitude'][:]
     new_dep = new_grid['depth'][:]
 
+    # dati e maschera nuov (cadeau)
     new_data = new_grid[var_grid][:]
     new_mask = np.ma.masked_invalid(new_data).mask
 
+    # maschera dati vecchi (copernicus)
     masked_data = np.ma.masked_invalid(values2interp)   # Mask an array where invalid values occur (NaNs or infs).
     # Create a mask of valid (non-masked) points
     valid_mask = ~masked_data.mask
     
     assert values2interp.shape == (len(old_dep), len(old_lat), len(old_lon))
 
-    n_dep_old = (len(old_dep) -2 ) # per togliere gli ultimi due layer 
+    # dimensioni griglia vecchia (copernicus)
+    n_dep_old = (len(old_dep) -2 ) # per togliere gli ultimi due layer perchè non avevo valori
     n_lat_new = len(new_lat)
     n_lon_new = len(new_lon)
 
-    # griglie
+    # griglie nuova (cadeau) e vecchia (copernicus)
     LAT_new, LON_new = np.meshgrid(new_lat, new_lon, indexing="ij")
     LAT_old, LON_old = np.meshgrid(old_lat, old_lon, indexing="ij")
 
+    # punti (lat, lon) messi come lista, griglia nuova
     points_new = np.column_stack([LAT_new.ravel(), LON_new.ravel()])
 
-    # STEP 1: LINEAR and NEAR
+    # STEP 1: INTERPOLAZIONE ORIZZONTALE
     tmp_lin = np.empty((n_dep_old, n_lat_new, n_lon_new))
     tmp_nn = np.empty_like(tmp_lin)
 
-
+    # itero su tutte le profonidtà della griglia vecchia
     for k in range(n_dep_old):
-        # STEP 1.1: LINEAR
+        # STEP 1.1: LINEAR -> non serve che io distingua dati validi da dati non validi -> se non ho un punto circondato completamente da acqua avrò nan
         tmp_lin[k] = interpn(
             (old_lat, old_lon),
             values2interp[k],
@@ -62,7 +63,7 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
             fill_value=np.nan
         ).reshape(n_lat_new, n_lon_new)
 
-        # STEP 1.2: NEAREST
+        # STEP 1.2: NEAREST -> qui devo considerare solo i dati validi così da avere sempre un valore != nan, tutti i punti della griglia venogno riempiti dal valore di acquà valido più vicino
         slice_data = masked_data[k]
 
         mask = valid_mask[k]
@@ -81,24 +82,26 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
         ).reshape(n_lat_new, n_lon_new)
 
 
-    # STEP 3: MERGE
+    # STEP 2: MERGE
     tmp_lin[tmp_lin > 1e20] = np.nan
 
+    # Quali layer verticali della nearest interpolation (tmp_nn) contengono ancora NaN?
     problem_depths = np.where(np.isnan(tmp_nn).reshape(n_dep_old, -1).any(axis=1))[0]
-
     print("\n DEPTH CON NaN IN tmp_nn:", problem_depths)
 
+    # metto il valore di linear se esiste altrimenti metto quello di nearest
     tmp = np.where(np.isnan(tmp_lin), tmp_nn, tmp_lin)
 
-    print('sum nan in tmp lin',np.sum(np.isnan(tmp_lin)))
-    print('sum nan in tmp nn',np.sum(np.isnan(tmp_nn)))
-    print(f"Max in tmp nn: {np.nanmax(tmp_nn)}")
-    print(f"Max in tmp lin: {np.nanmax(tmp_lin)}")
+    # printo delle informazioni
+    print('sum nan in tmp lin',np.sum(np.isnan(tmp_lin))) # normale che ci siano
+    print('sum nan in tmp nn',np.sum(np.isnan(tmp_nn))) # deve essere 0
+    print(f"Max in tmp nn: {np.nanmax(tmp_nn)}")  # deve essere un valore ragionevole
+    print(f"Max in tmp lin: {np.nanmax(tmp_lin)}") # deve essere un valore ragionevole
 
 
-    # STEP 4: VERTICALE
+    # STEP 3: INTERPOLAZIONE VERTICALE -> lineare
     out = np.empty((len(new_dep), n_lat_new, n_lon_new))
-    old_dep = old_dep[:-2]
+    old_dep = old_dep[:-2] # tolgo gli ultimi due layers
 
 
     for i in range(n_lat_new):
@@ -113,13 +116,15 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
 
             y = spline(new_dep)
 
-            # boundary
+            # extrapolazione costante ai bordi:
+            # sopra la superficie uso il primo valore disponibile,
+            # sotto il fondo uso l'ultimo valore disponibile
             y[new_dep < old_dep.min()] = profile[0]
             y[new_dep > old_dep.max()] = profile[-1]
 
             out[:, i, j] = y
 
-    # STEP 5: MASK FINALE
+    # STEP 4: MASK FINALE -> applico la maschera di cadeau
     interp_data = ma.masked_array(
         out,
         mask=new_mask,
@@ -145,8 +150,7 @@ def interpolate_data(cms_name: str, input_path: str, output_path: str, grid_file
     '''
 
 
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
+    os.makedirs(output_path, exist_ok=True)
 
     # Open the grid file to get the new dimensions
     with nc.Dataset(grid_file, "r") as grid_nc:
@@ -158,26 +162,30 @@ def interpolate_data(cms_name: str, input_path: str, output_path: str, grid_file
 
         assigned_data_files = data_files[rank::n_processes]
 
-            # Iterate over the NetCDF files in the source directory
+        # Iterate over the NetCDF files in the source directory
         for file_path in assigned_data_files:
             # Open the original NetCDF file for reading
             with nc.Dataset(file_path, "r") as source_nc:
                 source_file_name = os.path.basename(file_path)
-                # perchè leggo di nuovo il file se l'ho già letto come source_nc ???????
                 # source_ds = nc.Dataset(file_path)
                 old_lon = source_nc['longitude'][:]
                 old_lat = source_nc['latitude'][:]
                 old_dep = source_nc['depth'][:]
                 old_data = source_nc[cms_name][:]
                 # Define the path for the modified version in the destination directory
+                # file finale
                 final_file_path = os.path.join(output_path, source_file_name)
+                # file temporaneo
                 tmp_file_path = final_file_path + ".tmp"
                 
                 if not os.path.exists(final_file_path):
-                        # se esiste un tmp vecchio/danneggiato lo rimuovo
+                    # crea la cartella senza race condition MPI
+                    os.makedirs(output_path, exist_ok=True)
+                    # rimuovi eventuale tmp incompleto
                     if os.path.exists(tmp_file_path):
                         print(f"Removing incomplete file: {tmp_file_path}")
                         os.remove(tmp_file_path)
+
                 # Create a new NetCDF file for writing
                     with nc.Dataset(tmp_file_path, "w") as dest_nc:
                         # Create dimensions in the new file based on the interpolated grid
@@ -205,7 +213,7 @@ def interpolate_data(cms_name: str, input_path: str, output_path: str, grid_file
                         # Copy global attributes from the original file
                         dest_nc.setncatts(source_nc.__dict__)
 
-                        # rename 
+                        # passiamo al file definitivo
                     os.replace(tmp_file_path, final_file_path)
                     print(f"Created {final_file_path}")
                 else:

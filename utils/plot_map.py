@@ -299,12 +299,17 @@ def plot_netcdf(file, var_name, output_dir, threshold=None):
     for i, layer in enumerate(var_data):
         vmax = np.nanmax(layer)
 
+        if var_name in ['thetao', 'so']:
+            vmin = np.nanmin(layer)
+        else: 
+            vmin = 0 
+
         # print(f"\nLayer {i}")
         # print("Min:", np.nanmin(layer))
         # print("Max:", np.nanmax(layer))
         # num_negatives = np.sum((layer < 0) & (~np.isnan(layer)))
         # print("Negatives:", num_negatives, "on:", layer.size)
-
+        
         # Calcolo percentuale sopra threshold se definito
         perc_above = None
         if threshold is not None:
@@ -320,7 +325,7 @@ def plot_netcdf(file, var_name, output_dir, threshold=None):
             lon, lat,
             np.ma.masked_invalid(layer),
             cmap=cmap,
-            vmin=0,
+            vmin=vmin,
             vmax=vmax
         )
 

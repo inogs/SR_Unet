@@ -23,6 +23,8 @@ def parse_input_parameters():
                         help="Max number of files to process")
     parser.add_argument("-j", "--jobs", type=int, default=1,
                         help="Number of parallel workers (default=1 = serial)")
+    parser.add_argument("-op", "--output-path", default=None,
+                        help="Directory where the stat.<input>.txt output file is written")
 
     args = parser.parse_args()
 
@@ -30,6 +32,8 @@ def parse_input_parameters():
         raise ValueError("-n must be positive")
     if args.jobs <= 0:
         raise ValueError("-j must be positive")
+    if args.output_path is not None and not args.output_path.strip():
+        raise ValueError("-op/--output-path must not be empty")
 
     return args
 
@@ -125,10 +129,9 @@ def main():
     # --- write output ---
     base_name = os.path.basename(args.file_path)
     name = os.path.splitext(base_name)[0]
-    out_path = os.path.join(
-        os.path.dirname(args.file_path),
-        f"stat.{name}.txt"
-    )
+    out_dir = args.output_path or os.path.dirname(args.file_path)
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, f"stat.{name}.txt")
 
     with open(out_path, "w") as f:
         f.write(f"{mu_tot:.16e}\n")

@@ -5,10 +5,11 @@ import sys
 
 
 # Edit these values directly in the script.
-TXT_ROOT = Path("/leonardo_scratch/large/userexternal/gzuccari/AdriaticNC_out.split.07.02.01.seed.42")
+TXT_ROOT = Path("/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/iCMS_nc.split.07.02.01.seed.42")
+OUTPUT_ROOT = Path("/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/iCMS_nc.stats.07.02.01.seed.42")
 COMPUTE_SCRIPT = Path("/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/preproc/compute_avgstd_WIP3.py")
 MAX_FILES = None
-JOBS = 24
+JOBS = 12
 RECURSIVE = False
 
 
@@ -58,6 +59,8 @@ def build_command(txt_path: Path, variable: str):
         variable,
         "-j",
         str(JOBS),
+        "-op",
+        str(OUTPUT_ROOT),
     ]
 
     if MAX_FILES is not None:

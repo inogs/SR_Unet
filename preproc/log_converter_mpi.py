@@ -12,6 +12,9 @@ def single_conversion(file_path, output_dir):
 
     ds = nc.Dataset(file_path)
     file_name = os.path.basename(file_path)
+    # add log. to the file name before the extension
+    name, ext = os.path.splitext(file_name)
+    file_name = f"{name}.log{ext}"
     output_path = os.path.join(output_dir, file_name)
 
     # check if the output file already exists, if it does delete exit the function
@@ -58,8 +61,9 @@ def get_netcdf_file_list(input_dir):
 if __name__ == "__main__":
     print_hello()
 
-    folder_path = "/leonardo_work/OGS23_PRACE_IT_0/fadobbat/working_data/NARF_nc/Chla/"
-    output_path = "/leonardo_scratch/large/userexternal/gzuccari/iCMS.log_nc/no3/"
+    # folder_path = "/leonardo_work/OGS23_PRACE_IT_0/fadobbat/working_data/NARF_nc/Chla/"
+    folder_path = "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/Chla/"
+    output_path = "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/Chla.log/"
     file_list = get_netcdf_file_list(folder_path)
 
     # make an if on rank 0

@@ -1,0 +1,22 @@
+{
+  "jobs": [
+    {
+      "folder_path": "/leonardo_scratch/large/userexternal/gzuccari/AdriaticNC_out/chl/",
+      "output_path": "/leonardo_scratch/large/userexternal/gzuccari/AdriaticNC_out/chl.log/",
+      "conversion_type": "log",
+      "variable_name": "chl"
+    },
+    {
+      "folder_path": "/leonardo_scratch/large/userexternal/gzuccari/AdriaticNC_out/po4/",
+      "output_path": "/leonardo_scratch/large/userexternal/gzuccari/AdriaticNC_out/po4.csv/",
+      "conversion_type": "log",
+      "variable_name": "po4"
+    },
+    {
+      "folder_path": "/leonardo_scratch/large/userexternal/gzuccari/AdriaticNC_out/no3/",
+      "output_path": "/leonardo_scratch/large/userexternal/gzuccari/AdriaticNC_out/no3.log/",
+      "conversion_type": "log",
+      "variable_name": "no3"
+    }
+  ]
+}

@@ -36,7 +36,8 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
     assert values2interp.shape == (len(old_dep), len(old_lat), len(old_lon))
 
     # dimensioni griglia vecchia (copernicus)
-    n_dep_old = (len(old_dep) -2 ) # per togliere gli ultimi due layer perchè non avevo valori
+    # n_dep_old = (len(old_dep) -2 ) # per togliere gli ultimi due layer perchè non avevo valori
+    n_dep_old = (len(old_dep))
     n_lat_new = len(new_lat)
     n_lon_new = len(new_lon)
 
@@ -63,16 +64,37 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
             fill_value=np.nan
         ).reshape(n_lat_new, n_lon_new)
 
-        # STEP 1.2: NEAREST -> qui devo considerare solo i dati validi così da avere sempre un valore != nan, tutti i punti della griglia venogno riempiti dal valore di acquà valido più vicino
+        # STEP 1.2: NEAREST -> qui devo considerare solo i dati validi così da avere sempre un valore != nan, tutti i punti della griglia vengono riempiti dal valore di acqua valido più vicino
         slice_data = masked_data[k]
 
         mask = valid_mask[k]
         values_valid = slice_data[mask]
 
+        # DEBUG 
+        print(f"\n DEBUG LAYER {k}")
+
+        print("slice finite:", np.isfinite(slice_data).sum())
+        print("slice nan:", np.isnan(slice_data).sum())
+
+        print("mask true count:", mask.sum())
+        print("mask false count:", (~mask).sum())
+
+        print("values_valid size:", values_valid.size)
+
+        if values_valid.size > 0:
+            print("values_valid min/max:", np.min(values_valid), np.max(values_valid))
+            # print("unique values_valid:", np.unique(values_valid)[:10])  # primi 10
+
         points_valid = np.column_stack([
             LAT_old[mask],
             LON_old[mask]
         ])
+
+        # print("points_valid shape:", points_valid.shape)
+        # print('values valid', values_valid.shape)
+        if values_valid.size == 0:
+            print(f"WARNING: no valid points at depth {k}")
+
 
         tmp_nn[k] = griddata(
             points_valid,
@@ -101,13 +123,70 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
 
     # STEP 3: INTERPOLAZIONE VERTICALE -> lineare
     out = np.empty((len(new_dep), n_lat_new, n_lon_new))
-    old_dep = old_dep[:-2] # tolgo gli ultimi due layers
+    # old_dep = old_dep[:-2] # tolgo gli ultimi due layers
+
+    n_profiles_with_nan = 0
+    n_fixed_profiles = 0
+    n_unfixable_profiles = 0
 
 
     for i in range(n_lat_new):
         for j in range(n_lon_new):
 
             profile = tmp[:, i, j]
+
+            ######## DEBUG pozzi
+            had_nan = np.any(~np.isfinite(profile))
+            if had_nan:
+                n_profiles_with_nan += 1
+
+            if np.any(~np.isfinite(profile)):
+                print("\nDEBUG COLONNA CON NaN")
+                print("i, j =", i, j)
+
+                print("profile originale:")
+                print(profile)
+
+                print("valid mask:")
+                print(np.isfinite(profile))
+
+                print("old_dep:")
+                print(old_dep)
+            ###########
+
+            # CORNER CASE -> gestione dei pozzi
+            # dove la griglia fine è più profonda della grossolana, propago verso il basso l’ultimo valore oceanico valido disponibile
+            profile = profile.copy()
+            valid = np.isfinite(profile)
+
+            ### debug
+            if not np.any(valid):
+                n_unfixable_profiles += 1
+            ####
+
+            # fill sotto
+            last_valid = np.where(valid)[0][-1]
+            profile[last_valid+1:] = profile[last_valid]
+
+            ####### DEBUG 
+            fixed = np.all(np.isfinite(profile))
+            if had_nan and fixed:
+                n_fixed_profiles += 1
+
+            print("last_valid index:", last_valid)
+            print("last valid depth:", old_dep[last_valid])
+
+            print("profile DOPO fill:")
+            print(profile)
+
+            print("\n===== DEBUG SUMMARY =====")
+            print("profiles con NaN iniziali:", n_profiles_with_nan)
+            print("profiles corretti:", n_fixed_profiles)
+            print("profiles non correggibili:", n_unfixable_profiles)
+
+            #############
+    
+            # spline
             spline = make_interp_spline(
                 old_dep,
                 profile,
@@ -116,6 +195,17 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
 
             y = spline(new_dep)
 
+            ######### DEBUG 
+            print("new_dep:")
+            print(new_dep)
+
+            print("profilo interpolato finale:")
+            print(y)
+
+            print("nan finali:", np.sum(~np.isfinite(y)))
+            ##############
+
+            # CORNER CASE -> gestione dei valori negativi in superficie e fvìalori fuori range in profondità
             # extrapolazione costante ai bordi:
             # sopra la superficie uso il primo valore disponibile,
             # sotto il fondo uso l'ultimo valore disponibile
@@ -131,6 +221,8 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
         fill_value=1e20,
         dtype=np.float32
     )
+
+    
 
     return interp_data
 

@@ -1,8 +1,11 @@
 import argparse
+import json
 import os
 import time
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Manager
+from pathlib import Path
+from types import SimpleNamespace
 import netCDF4 as nc
 import numpy as np
 import numpy.ma as ma
@@ -13,41 +16,85 @@ WORKER_ID = None
 
 def parse_input_parameters():
     parser = argparse.ArgumentParser(
-        description="Compute global mean and std from multiple NetCDF files."
+        description="Compute global mean and std for all txt file lists in a folder."
     )
-    parser.add_argument("-dp", "--file-path", required=True,
-                        help="Path to text file containing list of NetCDF files")
-    parser.add_argument("-v", "--variable", required=True,
-                        help="Variable name inside NetCDF files")
-    parser.add_argument("-n", type=int, default=None,
-                        help="Max number of files to process")
-    parser.add_argument("-j", "--jobs", type=int, default=1,
-                        help="Number of parallel workers (default=1 = serial)")
-    parser.add_argument("-op", "--output-path", default=None,
-                        help="Directory where the stat.<input>.txt output file is written")
-
-    args = parser.parse_args()
-
-    if args.n is not None and args.n <= 0:
-        raise ValueError("-n must be positive")
-    if args.jobs <= 0:
-        raise ValueError("-j must be positive")
-    if args.output_path is not None and not args.output_path.strip():
-        raise ValueError("-op/--output-path must not be empty")
-
-    return args
+    parser.add_argument("-c", "--config", required=True,
+                        help="Path to JSON configuration file")
+    return parser.parse_args()
 
 
-def read_file_list(path, n=None):
+def read_conf_file(conf_path):
+    with open(conf_path, "r") as f:
+        return json.load(f, object_hook=lambda data: SimpleNamespace(**data))
+
+
+def validate_conf(conf):
+    required_fields = ["input_path", "output_path", "jobs"]
+
+    for field_name in required_fields:
+        if not hasattr(conf, field_name):
+            raise AttributeError(f"Missing configuration field: {field_name}")
+
+    for field_name in ["input_path", "output_path"]:
+        field_value = getattr(conf, field_name)
+        if not isinstance(field_value, str) or not field_value.strip():
+            raise ValueError(
+                f"Configuration field must be a non-empty string: {field_name}"
+            )
+
+    if not os.path.exists(conf.input_path):
+        raise FileNotFoundError(f"Input folder not found: {conf.input_path}")
+    if not os.path.isdir(conf.input_path):
+        raise ValueError(f"Input path is not a folder: {conf.input_path}")
+    if os.path.exists(conf.output_path) and not os.path.isdir(conf.output_path):
+        raise ValueError(f"Output path is not a folder: {conf.output_path}")
+
+    if not isinstance(conf.jobs, int) or conf.jobs <= 0:
+        raise ValueError("Configuration field jobs must be a positive integer")
+    if hasattr(conf, "recursive") and not isinstance(conf.recursive, bool):
+        raise ValueError("Configuration field recursive must be a boolean")
+
+
+def read_file_list(path):
     files = []
     with open(path) as f:
-        for i, line in enumerate(f):
-            if n is not None and i >= n:
-                break
+        for line in f:
             line = line.strip()
             if line:
                 files.append(line)
     return files
+
+
+def first_non_empty_line(txt_path):
+    with txt_path.open("r") as handle:
+        for line in handle:
+            stripped = line.strip()
+            if stripped:
+                return stripped
+    return None
+
+
+def find_txt_files(root, recursive=False):
+    pattern = "**/*.txt" if recursive else "*.txt"
+    txt_files = []
+
+    for txt_path in sorted(root.glob(pattern)):
+        if not txt_path.is_file():
+            continue
+        if txt_path.name == "log.txt":
+            continue
+        if txt_path.name.startswith("stat."):
+            continue
+        if first_non_empty_line(txt_path) is None:
+            continue
+
+        txt_files.append(txt_path)
+
+    return txt_files
+
+
+def variable_from_txt_name(txt_path):
+    return txt_path.name.split(".")[0]
 
 
 def file_stats(path, variable):
@@ -86,32 +133,31 @@ def combine_equal_mask(mus, vars_):
     return mu_tot, sigma
 
 
-def main():
-    args = parse_input_parameters()
-
-    # --- read file list ---
+def compute_list_stats(txt_path, variable, jobs):
     t0 = time.time()
-    files = read_file_list(args.file_path, args.n)
-    print(f"Loaded {len(files)} files in {time.time() - t0:.2f} s")
+    files = read_file_list(txt_path)
+    if not files:
+        raise ValueError(f"No files found in list: {txt_path}")
 
-    # --- compute per-file stats ---
+    print(f"Loaded {len(files)} files from {txt_path} in {time.time() - t0:.2f} s")
+
     t0 = time.time()
 
-    if args.jobs == 1:
-        stats = [file_stats(f, args.variable) for f in files]
+    if jobs == 1:
+        stats = [file_stats(f, variable) for f in files]
     else:
         with Manager() as manager:
             counter = manager.Value("i", 0)
             lock = manager.Lock()
             with ProcessPoolExecutor(
-                max_workers=args.jobs,
+                max_workers=jobs,
                 initializer=init_worker_id,
                 initargs=(counter, lock),
             ) as ex:
                 stats = list(ex.map(
                     file_stats_logged,
                     files,
-                    [args.variable] * len(files)
+                    [variable] * len(files)
                 ))
 
     mus, vars_ = zip(*stats)
@@ -126,18 +172,41 @@ def main():
     print(f"Mean  = {mu_tot:.10e}")
     print(f"Std   = {sigma:.10e}")
 
-    # --- write output ---
-    base_name = os.path.basename(args.file_path)
-    name = os.path.splitext(base_name)[0]
-    out_dir = args.output_path or os.path.dirname(args.file_path)
-    os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, f"stat.{name}.txt")
+    return mu_tot, sigma
+
+
+def write_stats(out_dir, txt_path, mu_tot, sigma):
+    name = txt_path.stem
+    out_path = out_dir / f"stat.{name}.txt"
 
     with open(out_path, "w") as f:
         f.write(f"{mu_tot:.16e}\n")
         f.write(f"{sigma:.16e}\n")
 
     print(f"Saved results to {out_path}")
+
+
+def main():
+    args = parse_input_parameters()
+    conf = read_conf_file(args.config)
+    validate_conf(conf)
+
+    input_path = Path(conf.input_path)
+    output_path = Path(conf.output_path)
+    recursive = getattr(conf, "recursive", False)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    txt_files = find_txt_files(input_path, recursive)
+    if not txt_files:
+        raise FileNotFoundError(f"No input txt files found in {input_path}")
+
+    print(f"Found {len(txt_files)} txt files in {input_path}")
+
+    for txt_path in txt_files:
+        variable = variable_from_txt_name(txt_path)
+        print(f"Computing {txt_path} with variable {variable}")
+        mu_tot, sigma = compute_list_stats(txt_path, variable, conf.jobs)
+        write_stats(output_path, txt_path, mu_tot, sigma)
 
 
 if __name__ == "__main__":

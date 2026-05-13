@@ -1,8 +1,6 @@
 {
-  "txt_root": "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/iCMS_nc.split.07.02.01.seed.42",
-  "output_root": "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/iCMS_nc.stats.07.02.01.seed.42",
-  "compute_script": "/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/preproc/compute_dataset_statistics.py",
-  "max_files": null,
+  "input_path": "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/iCMS_nc.split.07.02.01.seed.42",
+  "output_path": "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/iCMS_nc.stats.07.02.01.seed.42",
   "jobs": 24,
   "recursive": false
 }

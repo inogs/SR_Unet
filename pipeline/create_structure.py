@@ -4,7 +4,7 @@ import json
 # three directories, target, input and output
 
 path_target_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF"
-path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/iCMS"
+path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/Adriatic"
 path_output_dir = "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME"
 
 # params: train, test and validation
@@ -136,13 +136,10 @@ list_variables = {
     "thetao":"T"
 }
 
-# list of valid variables needs the same structure of list_variables
+# create an empty copy of list_variables to be used for pt creation, but only with the variable pairs that are present in both input and target directories
 
-list_valid_variable_pairs = []
-
-#check that first entry is present in in the path_input_dir as folder
-#check that second entry is present in the path_target_dir as folder
-#if both are present, add the pair to the list of valid variable pairs
+# get valid pairs
+list_valid_variable_pairs = {}
 for var_input, var_target in list_variables.items():
     input_folder = os.path.join(path_input_dir, var_input)
     target_folder = os.path.join(path_target_dir, var_target)
@@ -153,20 +150,16 @@ for var_input, var_target in list_variables.items():
     if not os.path.exists(target_folder):
         print(f"Warning: target folder {target_folder} does not exist. Skipping variable pairing: {var_input} -> {var_target}")
         continue
+    list_valid_variable_pairs[var_input] = var_target
     # append in the same way of list_variables in dictionary format, to be used for pt creation
 
 
-
-print("List of valid variable pairs to be used for pt creation:")
-for var_input, var_target in list_valid_variable_pairs:
+print("List of valid variable pairs to be converted:")
+for var_input, var_target in list_valid_variable_pairs.items():
     print(f"    {var_input} -> {var_target}")
 
-print(list_valid_variable_pairs)
-print(list_variables)
 
 list_pt_types = ["train", "test", "val"]
-
-
 # SECTION -- PT CREATION
 for var_input, var_target in list_valid_variable_pairs.items():
     for pt_type in list_pt_types:

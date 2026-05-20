@@ -105,15 +105,18 @@ def single_conversion(file_path, conversion_type, conversion_function, output_di
     # -- Section: conversion
     ds_out = nc.Dataset(temp_output_path, "w", format="NETCDF4")
 
+    # Copy global attributes to the output dataset.
     for attr_name in ds.ncattrs():
         ds_out.setncattr(attr_name, ds.getncattr(attr_name))
 
+    # Recreate each dimension, preserving unlimited dimensions.
     for dim_name, dimension in ds.dimensions.items():
         ds_out.createDimension(
             dim_name,
             len(dimension) if not dimension.isunlimited() else None,
         )
 
+    # Recreate each variable with the same type, dimensions, and fill value.
     for var_name, src_var in ds.variables.items():
         if "_FillValue" in src_var.ncattrs():
             out_var = ds_out.createVariable(
@@ -129,6 +132,7 @@ def single_conversion(file_path, conversion_type, conversion_function, output_di
                 src_var.dimensions,
             )
 
+        # Copy variable attributes, except _FillValue which is handled at creation time.
         for attr_name in src_var.ncattrs():
             if attr_name != "_FillValue":
                 out_var.setncattr(attr_name, src_var.getncattr(attr_name))

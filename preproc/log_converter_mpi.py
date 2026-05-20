@@ -83,7 +83,6 @@ def validate_conf(conf):
 def single_conversion(file_path, conversion_type, conversion_function, output_dir, variable_name):
 
     # -- Section: file handling
-    ds = nc.Dataset(file_path)
     file_name = os.path.basename(file_path)
     name, ext = os.path.splitext(file_name)
 
@@ -95,6 +94,8 @@ def single_conversion(file_path, conversion_type, conversion_function, output_di
     if os.path.exists(output_path):
         print(f"Output file {output_path} already exists, skipping conversion.")
         return
+
+    ds = nc.Dataset(file_path)
 
     # create a temporary output file path for the current process, if it already exists remove it
     temp_output_path = os.path.join(output_dir, f"temp_{rank}_{file_name}")

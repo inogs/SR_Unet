@@ -8,7 +8,7 @@
     },
     {
       "folder_path": "/leonardo_scratch/large/userexternal/gzuccari/AdriaticNC_out/po4/",
-      "output_path": "/leonardo_scratch/large/userexternal/gzuccari/AdriaticNC_out/po4.csv/",
+      "output_path": "/leonardo_scratch/large/userexternal/gzuccari/AdriaticNC_out/po4.log/",
       "conversion_type": "log",
       "variable_name": "po4"
     },
@@ -17,6 +17,24 @@
       "output_path": "/leonardo_scratch/large/userexternal/gzuccari/AdriaticNC_out/no3.log/",
       "conversion_type": "log",
       "variable_name": "no3"
+    },
+    {
+      "folder_path": "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/Chla",
+      "output_path": "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/Chla.log/",
+      "conversion_type": "log",
+      "variable_name": "Chla"
+    },
+    {
+      "folder_path": "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/N1p",
+      "output_path": "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/N1p.log/",
+      "conversion_type": "log",
+      "variable_name": "N1p"
+    },
+    {
+      "folder_path": "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/N3n",
+      "output_path": "/leonardo_scratch/large/userexternal/gzuccari/NARF_nc/N3n.log/",
+      "conversion_type": "log",
+      "variable_name": "N3n"
     }
   ]
 }

@@ -118,6 +118,30 @@ def extract_zero_lowest_negative_counts(counts_dict):
     return zero_count, lowest_power_of_10, negative_count
 
 
+def format_power_of_10(power_of_10):
+    if power_of_10 is None:
+        return "NA"
+    return f"{power_of_10:.0e}"
+
+
+def write_dataset_stats(output_path, variable_name, stats_rows):
+    output_file = os.path.join(output_path, f"{variable_name}.dataset_stats.txt")
+
+    with open(output_file, "w") as f:
+        f.write(
+            "nome_file\tcelle_uguali_a_0\tminima_potenza_di_10\tcelle_negative\n"
+        )
+        for _, file_name, zero_count, lowest_power_of_10, negative_count in stats_rows:
+            f.write(
+                f"{file_name}\t"
+                f"{zero_count}\t"
+                f"{format_power_of_10(lowest_power_of_10)}\t"
+                f"{negative_count}\n"
+            )
+
+    return output_file
+
+
 def get_netcdf_file_list(input_dir):
     file_list = []
     for file in os.listdir(input_dir):
@@ -171,28 +195,32 @@ if __name__ == "__main__":
         print("This is the master process.")
         print(f"Found {len(file_list)} netCDF files in the folder.")
 
-    # process specific instructions
-    assigned_data_files = file_list[rank::n_processes]
+    assigned_data_files = list(enumerate(file_list))[rank::n_processes]
+    print(f"Process {rank} processing {len(assigned_data_files)} files")
 
-    for file in assigned_data_files:
-        print(f"Process {rank} assigned file: {file}")
-
-    for file in assigned_data_files:
-        print(f"Process {rank} converting file: {file}")
-        # call the count valid between powers of 10 function and save the result in a json file in the output path, with the same name as the input file but with .json extension
+    local_stats = []
+    for file_index, file in assigned_data_files:
         counts_between = count_valid_between_powers_of_10_from_path(path= file, var_key = variable_name)
-        # get the zero count, the lowest power of 10 with a non-zero count, and the negative count from the counts_between dictionary
         zero_count, lowest_power_of_10, negative_count = extract_zero_lowest_negative_counts(counts_between)
 
         display_file_name = os.path.basename(file)
-        print(f"Process {rank} statistics for file {display_file_name}:")
-        print(f"    Count of valid {variable_name} values equal to 0: {zero_count}")
-        if lowest_power_of_10 is not None:
-            print(f"    Lowest power of 10 with a non-zero count of valid {variable_name} values: {lowest_power_of_10}")
-        else:
-            print(f"    No valid {variable_name} values found between powers of 10.")
-        print(f"    Count of valid {variable_name} values less than 0: {negative_count}")
+        local_stats.append(
+            (
+                file_index,
+                display_file_name,
+                zero_count,
+                lowest_power_of_10,
+                negative_count,
+            )
+        )
         del counts_between
+
+    gathered_stats = comm.gather(local_stats, root=0)
+    if rank == 0:
+        stats_rows = [row for process_rows in gathered_stats for row in process_rows]
+        stats_rows.sort(key=lambda row: row[0])
+        output_file = write_dataset_stats(output_path, variable_name, stats_rows)
+        print(f"Saved dataset statistics to {output_file}")
 
 
 # end of main

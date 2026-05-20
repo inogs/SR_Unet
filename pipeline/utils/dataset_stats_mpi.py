@@ -129,14 +129,17 @@ def write_dataset_stats(output_path, variable_name, stats_rows):
 
     with open(output_file, "w") as f:
         f.write(
-            "nome_file\tcelle_uguali_a_0\tminima_potenza_di_10\tcelle_negative\n"
+            f"{'file_name':<24}"
+            f"{'zero_count':>18}"
+            f"{'min_pw_of_10':>18}"
+            f"{'neg_count':>18}\n"
         )
         for _, file_name, zero_count, lowest_power_of_10, negative_count in stats_rows:
             f.write(
-                f"{file_name}\t"
-                f"{zero_count}\t"
-                f"{format_power_of_10(lowest_power_of_10)}\t"
-                f"{negative_count}\n"
+                f"{file_name:<24}"
+                f"{zero_count:>18}"
+                f"{format_power_of_10(lowest_power_of_10):>18}"
+                f"{negative_count:>18}\n"
             )
 
     return output_file
@@ -200,6 +203,7 @@ if __name__ == "__main__":
 
     local_stats = []
     for file_index, file in assigned_data_files:
+        print(f"Process {rank} assigned file: {file}")
         counts_between = count_valid_between_powers_of_10_from_path(path= file, var_key = variable_name)
         zero_count, lowest_power_of_10, negative_count = extract_zero_lowest_negative_counts(counts_between)
 

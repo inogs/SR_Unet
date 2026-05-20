@@ -1,32 +1,42 @@
 import os
 import json
 
-# three directories, target, input and output
+# control flags
+split_flag = False
+stat_flag = False
+make_pt_flag = True
 
-path_target_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF"
-path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/Adriatic"
+# three directories, target, input and output
+path_target_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup"
+path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC.interp"
 path_output_dir = "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME"
 
-# params: train, test and validation
+# params: train, test and validation size, seed for reproducibility, number of threads for parallel processing
 test_size = 0.2
 validation_size = 0.1
 seed = 42
-N_THREADS = 24
+N_THREADS = 48
 
 print(f"Target directory: {path_target_dir}")
 print(f"Input directory: {path_input_dir}")
 print(f"Output directory: {path_output_dir}")
 
-# REMINDER: check for target and input path
-# REMINDER: if output path does not exist stop and return error message
+# check that target and input paths exist and are directories, if not exit with error message
+if not os.path.exists(path_target_dir):
+    raise FileNotFoundError(f"  Target directory not found: {path_target_dir}")
+if not os.path.isdir(path_target_dir):
+    raise ValueError(f" Target path is not a directory: {path_target_dir}")
+if not os.path.exists(path_input_dir):
+    raise FileNotFoundError(f"  Input directory not found: {path_input_dir}")
+if not os.path.isdir(path_input_dir):
+    raise ValueError(f"  Input path is not a directory: {path_input_dir}")
 
-# create two subdirectories in the output
-# one named 'input'
-# other named 'target'
-# third named 'pt.files'
+# check that output path exists, if not create it
+if not os.path.exists(path_output_dir):
+    print(f"Output directory does not exist, creating it: {path_output_dir}")
+    os.makedirs(path_output_dir)
 
-# write lines to the create subdirectories
-# print to terminal with indentation
+# create subdirectories
 print("Creating output subdirectories:")
 print(f"    {os.path.join(path_output_dir, 'input')}")
 print(f"    {os.path.join(path_output_dir, 'target')}")
@@ -35,11 +45,6 @@ os.makedirs(os.path.join(path_output_dir, "input"), exist_ok=True)
 os.makedirs(os.path.join(path_output_dir, "target"), exist_ok=True)
 os.makedirs(os.path.join(path_output_dir, "pt.files"), exist_ok=True)
 
-# inside both input and target subdirectories create subfolders named 'converted variables' and 'original variables'
-# os.makedirs(os.path.join(path_output_dir, "input", "converted variables"), exist_ok=True)
-# os.makedirs(os.path.join(path_output_dir, "input", "original variables"), exist_ok=True)
-# os.makedirs(os.path.join(path_output_dir, "target", "converted variables"), exist_ok=True)
-# os.makedirs(os.path.join(path_output_dir, "target", "original variables"), exist_ok=True)
 
 # inside both input and target subdirectories create folders split and stat
 print("Creating output subdirectories:")
@@ -52,10 +57,6 @@ os.makedirs(os.path.join(path_output_dir, "input", "stat"), exist_ok=True)
 os.makedirs(os.path.join(path_output_dir, "target", "split"), exist_ok=True)
 os.makedirs(os.path.join(path_output_dir, "target", "stat"), exist_ok=True)
 
-
-split_flag = True
-stat_flag = True
-make_pt_flag = True
 
 # SECTION -- SPLIT
 if split_flag:

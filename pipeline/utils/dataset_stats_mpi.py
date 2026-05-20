@@ -20,7 +20,7 @@ def parse_input_parameters():
     parser.add_argument(
         "-c",
         "--config",
-        default=os.path.join(os.path.dirname(__file__), "conf_convert.json"),
+        default=os.path.join(os.path.dirname(__file__), "conf_data_info.json"),
         help="Path to configuration file.",
     )
     return parser.parse_args()

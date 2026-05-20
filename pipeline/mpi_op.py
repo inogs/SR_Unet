@@ -2,11 +2,11 @@ import json
 import subprocess
 import os
 
-path_target_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF"
-path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/Adriatic"
+path_target_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup"
+path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC.interp"
 path_output_dir = "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME"
 conversion_type = "log"
-numeber_of_processes = 16
+number_of_processes = 16
 
 # given the output path, check that exists, if not return error message
 if not os.path.exists(path_output_dir):
@@ -66,7 +66,7 @@ for var_input, var_target in list_valid_variable_pairs.items():
 
     conf_conversion = {
         "folder_path": os.path.join(path_input_dir, var_input),
-        "output_path": os.path.join(path_output_dir, "input", "converted.variables", var_input),
+        "output_path": os.path.join(path_output_dir, "input", "converted.variables", var_input + "." + conversion_type),
         "conversion_type": conversion_type,
         "variable_name": var_input
     }
@@ -79,7 +79,7 @@ for var_input, var_target in list_valid_variable_pairs.items():
 
     cmd = [
         "mpirun",
-        "-np", str(numeber_of_processes),
+        "-np", str(number_of_processes),
         "python",
         "converter_mpi.py",
         "--config", conf_conversion_path
@@ -93,7 +93,7 @@ for var_input, var_target in list_valid_variable_pairs.items():
 
     conf_conversion_target = {
         "folder_path": os.path.join(path_target_dir, var_target),
-        "output_path": os.path.join(path_output_dir, "target", "converted.variables", var_target),
+        "output_path": os.path.join(path_output_dir, "target", "converted.variables", var_target + "." + conversion_type),
         "conversion_type": conversion_type,
         "variable_name": var_target
     }
@@ -106,7 +106,7 @@ for var_input, var_target in list_valid_variable_pairs.items():
 
     cmd = [
         "mpirun",
-        "-np", str(numeber_of_processes),
+        "-np", str(number_of_processes),
         "python",
         "converter_mpi.py",
         "--config", conf_conversion_target_path

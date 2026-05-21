@@ -1,6 +1,0 @@
-{
-  "input_path": "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/iCMS_nc.split.07.02.01.seed.42",
-  "output_path": "/leonardo_scratch/large/userexternal/gzuccari/iCMS_nc/iCMS_nc.stats.07.02.01.seed.42",
-  "jobs": 24,
-  "recursive": false
-}

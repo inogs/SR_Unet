@@ -1,0 +1,22 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --ntasks=16
+#SBATCH --cpus-per-task=1
+#SBATCH --time=00:15:00           # walltime (HH:MM:SS)
+#SBATCH --account=OGS23_PRACE_IT_1 # project/account
+#SBATCH --partition=dcgp_usr_prod # partition/queue
+#SBATCH --qos=dcgp_qos_dbg
+#SBATCH -J python.mpi            # job name
+#SBATCH -o %x-%j.out             # stdout file (%x=jobname, %j=jobid)
+#SBATCH -e %x-%j.err             # stderr file (%x=jobname, %j=jobid)
+
+echo "HOST: $(hostname)"
+echo "SLURM_NTASKS=$SLURM_NTASKS"
+
+source ~/.bashrc # questo attivera' conda
+conda activate torch_test # questo attivera' l'ambiente con torch e mpi4py
+
+export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi2.so
+
+# metti l'eseguibile
+srun --mpi=pmi2 python /leonardo/home/userexternal/adelsavi/git/codice_fede/preproc/pozzi3.py -ip_cop /leonardo/home/userexternal/adelsavi/git/codice_fede/prova_interp/so/so_2008-029.nc -ip_cad /leonardo/home/userexternal/adelsavi/git/codice_fede/prova_interp_cadeau/S/S_2009_071.nc -v so -op /leonardo/home/userexternal/adelsavi/git/codice_fede

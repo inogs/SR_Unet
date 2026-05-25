@@ -1,10 +1,11 @@
 import os
-import glob
-import sys
+import argparse
+import json
 import netCDF4 as nc
 import numpy as np
 import numpy.ma as ma
 from typing import Dict
+from types import SimpleNamespace
 from scipy.interpolate import interpn, make_interp_spline, griddata
 import scipy.interpolate as intrp
 
@@ -14,8 +15,89 @@ from mpi4py import MPI
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 n_processes = comm.Get_size()
-# print('rank:', rank)
 
+
+def parse_input_parameters():
+    parser = argparse.ArgumentParser(
+        description="Interpolate Copernicus Marine netCDF variables on a target grid using MPI."
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        default=os.path.join(os.path.dirname(__file__), "conf_interpolate.json"),
+        help="Path to configuration file.",
+    )
+    return parser.parse_args()
+
+
+def validate_conf_file_path(conf_path):
+    if not os.path.exists(conf_path):
+        raise FileNotFoundError(f"Configuration file not found: {conf_path}")
+    if not os.path.isfile(conf_path):
+        raise ValueError(f"Configuration path is not a file: {conf_path}")
+
+    if rank == 0:
+        print("Configuration path check: passed")
+        print(f"    Configuration path: {conf_path}")
+
+
+def read_conf_file(conf_path):
+    with open(conf_path, "r") as f:
+        return json.load(f, object_hook=lambda data: SimpleNamespace(**data))
+
+
+def validate_conf(conf):
+    required_fields = [
+        "input_path",
+        "output_path",
+        "grid_file_path",
+        "variables",
+    ]
+    path_fields = [
+        "input_path",
+        "output_path",
+        "grid_file_path",
+    ]
+
+    for field_name in required_fields:
+        if not hasattr(conf, field_name):
+            raise AttributeError(f"Missing configuration field: {field_name}")
+
+    for field_name in path_fields:
+        field_value = getattr(conf, field_name)
+        if not os.path.exists(field_value):
+            raise FileNotFoundError(
+                f"Configuration path does not exist for {field_name}: {field_value}"
+            )
+
+    if not isinstance(conf.variables, list) or len(conf.variables) == 0:
+        raise ValueError(
+            "Configuration field variables must contain at least one variable"
+        )
+
+    if rank == 0:
+        print("Configuration file check: passed")
+        for field_name, field_value in sorted(vars(conf).items()):
+            print(f"    {field_name}: {field_value}")
+
+
+def get_netcdf_file_list(input_dir):
+    file_list = []
+    for file in os.listdir(input_dir):
+        if file.endswith(".nc"):
+            file_list.append(os.path.join(input_dir, file))
+    return sorted(file_list)
+
+
+def validate_file_list(file_list, variable_name):
+    if not file_list:
+        raise ValueError("No netCDF files found in the input folder.")
+
+    with nc.Dataset(file_list[0]) as dataset:
+        if variable_name not in dataset.variables:
+            raise ValueError(
+                f"Variable {variable_name} not found in first netCDF file: {file_list[0]}"
+            )
 
 
 def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid):
@@ -36,7 +118,6 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
     assert values2interp.shape == (len(old_dep), len(old_lat), len(old_lon))
 
     # dimensioni griglia vecchia (copernicus)
-    # n_dep_old = (len(old_dep) -2 ) # per togliere gli ultimi due layer perchè non avevo valori
     n_dep_old = (len(old_dep))
     n_lat_new = len(new_lat)
     n_lon_new = len(new_lon)
@@ -70,31 +151,10 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
         mask = valid_mask[k]
         values_valid = slice_data[mask]
 
-        # # DEBUG 
-        # print(f"\n DEBUG LAYER {k}")
-
-        # print("slice finite:", np.isfinite(slice_data).sum())
-        # print("slice nan:", np.isnan(slice_data).sum())
-
-        # print("mask true count:", mask.sum())
-        # print("mask false count:", (~mask).sum())
-
-        # print("values_valid size:", values_valid.size)
-
-        # if values_valid.size > 0:
-        #     print("values_valid min/max:", np.min(values_valid), np.max(values_valid))
-        #     # print("unique values_valid:", np.unique(values_valid)[:10])  # primi 10
-
         points_valid = np.column_stack([
             LAT_old[mask],
             LON_old[mask]
         ])
-
-        # # print("points_valid shape:", points_valid.shape)
-        # # print('values valid', values_valid.shape)
-        # if values_valid.size == 0:
-        #     print(f"WARNING: no valid points at depth {k}")
-
 
         tmp_nn[k] = griddata(
             points_valid,
@@ -107,85 +167,26 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
     # STEP 2: MERGE
     tmp_lin[tmp_lin > 1e20] = np.nan
 
-    # Quali layer verticali della nearest interpolation (tmp_nn) contengono ancora NaN?
-    # problem_depths = np.where(np.isnan(tmp_nn).reshape(n_dep_old, -1).any(axis=1))[0]
-    # print("\n DEPTH CON NaN IN tmp_nn:", problem_depths)
-
     # metto il valore di linear se esiste altrimenti metto quello di nearest
     tmp = np.where(np.isnan(tmp_lin), tmp_nn, tmp_lin)
 
-    # printo delle informazioni
-    # print('sum nan in tmp lin',np.sum(np.isnan(tmp_lin))) # normale che ci siano
-    # print('sum nan in tmp nn',np.sum(np.isnan(tmp_nn))) # deve essere 0
-    # print(f"Max in tmp nn: {np.nanmax(tmp_nn)}")  # deve essere un valore ragionevole
-    # print(f"Max in tmp lin: {np.nanmax(tmp_lin)}") # deve essere un valore ragionevole
-
-
     # STEP 3: INTERPOLAZIONE VERTICALE -> lineare
     out = np.empty((len(new_dep), n_lat_new, n_lon_new))
-    # old_dep = old_dep[:-2] # tolgo gli ultimi due layers
-
-    # n_profiles_with_nan = 0
-    # n_fixed_profiles = 0
-    # n_unfixable_profiles = 0
-
 
     for i in range(n_lat_new):
         for j in range(n_lon_new):
 
             profile = tmp[:, i, j]
 
-            # ######## DEBUG pozzi
-            # had_nan = np.any(~np.isfinite(profile))
-            # if had_nan:
-            #     n_profiles_with_nan += 1
-
-            # if np.any(~np.isfinite(profile)):
-            #     print("\nDEBUG COLONNA CON NaN")
-            #     print("i, j =", i, j)
-            #
-            #     print("profile originale:")
-            #     print(profile)
-            #
-            #     print("valid mask:")
-            #     print(np.isfinite(profile))
-            #
-            #     print("old_dep:")
-            #     print(old_dep)
-            ###########
-
             # CORNER CASE -> gestione dei pozzi
             # dove la griglia fine è più profonda della grossolana, propago verso il basso l’ultimo valore oceanico valido disponibile
             profile = profile.copy()
             valid = np.isfinite(profile)
 
-            # ### debug
-            # if not np.any(valid):
-            #     n_unfixable_profiles += 1
-            # ####
-
             # fill sotto
             last_valid = np.where(valid)[0][-1]
             profile[last_valid+1:] = profile[last_valid]
 
-            # ####### DEBUG 
-            # fixed = np.all(np.isfinite(profile))
-            # if had_nan and fixed:
-            #     n_fixed_profiles += 1
-
-            # print("last_valid index:", last_valid)
-            # print("last valid depth:", old_dep[last_valid])
-
-            # print("profile DOPO fill:")
-            # print(profile)
-
-            # print("\n===== DEBUG SUMMARY =====")
-            # print("profiles con NaN iniziali:", n_profiles_with_nan)
-            # print("profiles corretti:", n_fixed_profiles)
-            # print("profiles non correggibili:", n_unfixable_profiles)
-
-            #############
-    
             # spline
             spline = make_interp_spline(
                 old_dep,
@@ -194,16 +195,6 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
             )
 
             y = spline(new_dep)
-
-            ######### DEBUG 
-            # print("new_dep:")
-            # print(new_dep)
-
-            # print("profilo interpolato finale:")
-            # print(y)
-
-            # print("nan finali:", np.sum(~np.isfinite(y)))
-            ##############
 
             # CORNER CASE -> gestione dei valori negativi in superficie e fvìalori fuori range in profondità
             # extrapolazione costante ai bordi:
@@ -250,7 +241,8 @@ def interpolate_data(cms_name: str, input_path: str, output_path: str, grid_file
         new_latitudes = grid_nc['latitude'][:]  # New latitude and longitude values
         new_depth = grid_nc['depth'][:]
 
-        data_files = tuple(glob.glob(os.path.join(input_path, "*.nc")))
+        data_files = tuple(get_netcdf_file_list(input_path))
+        validate_file_list(data_files, cms_name)
 
         assigned_data_files = data_files[rank::n_processes]
 
@@ -259,10 +251,11 @@ def interpolate_data(cms_name: str, input_path: str, output_path: str, grid_file
             # Open the original NetCDF file for reading
             with nc.Dataset(file_path, "r") as source_nc:
                 source_file_name = os.path.basename(file_path)
-                # source_ds = nc.Dataset(file_path)
                 old_lon = source_nc['longitude'][:]
                 old_lat = source_nc['latitude'][:]
                 old_dep = source_nc['depth'][:]
+                if cms_name not in source_nc.variables:
+                    raise ValueError(f"Variable {cms_name} not found in {file_path}")
                 old_data = source_nc[cms_name][:]
                 # Define the path for the modified version in the destination directory
                 # file finale
@@ -321,61 +314,28 @@ if __name__ == "__main__":
     '''
         Interpolates the files present in the source directory (with Copernicus Marine files)
         to match the dimensions with those of the files in the target directory (with CADEAU files).
-        All the files referring to given variable are assumed to be in a directory named as the variable.
+        The input path must point directly to the directory containing the NetCDF files.
 
         Parameters:
-        -ip string with the input path (excluded vairable specific dir)
-        -op string with the output path (excluded variable specific dir)
-        -gp string with the path to a file with the target grid of interpolation
-        -vgp string with the var in the gp file
-        -v set of variables to interpolate
+        -c/--config path to a JSON configuration file
     '''
-    i = 1
-    var_list = []
-    input_path = None
-    output_path = None
-    grid_file_path = None
-    var_grid_path = None
+    args = parse_input_parameters()
+    validate_conf_file_path(args.config)
+    conf = read_conf_file(args.config)
+    validate_conf(conf)
 
-    while i < len(sys.argv):
-        if sys.argv[i] == "-ip":
-            if input_path is not None: raise ValueError("Repeated input for input path")
-            input_path = sys.argv[i+1]
-            i += 2
-        elif sys.argv[i] == "-op":
-            if output_path is not None: raise ValueError("Repeated input for output path")
-            output_path = sys.argv[i+1]
-            i += 2
-        elif sys.argv[i] == "-gp":
-            if grid_file_path is not None: raise ValueError("Repeated input for output path")
-            grid_file_path = sys.argv[i+1]
-            i += 2
-        elif sys.argv[i] == "-vgp":
-            if var_grid_path is not None: raise ValueError("Repeated input for output path")
-            var_grid_path = sys.argv[i+1]
-            i += 2
-        elif sys.argv[i] == "-v":
-            if var_list != []: raise ValueError("Repeated input for variable")
-            while i < len(sys.argv) - 1:
-                if not sys.argv[i+1].startswith('-'):
-                    var_list.append(sys.argv[i+1])
-                    i += 1
-                else:
-                    break
-            i += 1
-        else:
-            i += 1
+    if rank == 0:
+        os.makedirs(conf.output_path, exist_ok=True)
+    comm.Barrier()
 
-    if input_path is None: raise TypeError("Missing value for input path")
-    if output_path is None: raise TypeError("Missing value for output path")
-    if grid_file_path is None: raise TypeError("Missing value for grid file path")
-
-    if var_list == []: raise TypeError("Missing value for variable")
-    if var_grid_path == None: raise TypeError("Missing value for grid variable")
-
-    # Path to the file containing the grid to be used for interpolation
-
-    for var in var_list:
-        print(f"[interpolate_cms for variable '{var}'] Starting execution")
-        interpolate_data(var, os.path.join(input_path, var), os.path.join(output_path, var), grid_file_path, var_grid_path, n_dim=3)
-        print(f"[interpolate_cms for variable '{var}'] Ending execution")
+    for variable in conf.variables:
+        print(f"[interpolate_cms for variable '{variable.name}'] Starting execution")
+        interpolate_data(
+            variable.name,
+            conf.input_path,
+            conf.output_path,
+            conf.grid_file_path,
+            variable.grid_variable,
+            n_dim=3,
+        )
+        print(f"[interpolate_cms for variable '{variable.name}'] Ending execution")

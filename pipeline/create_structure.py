@@ -81,10 +81,19 @@ os.makedirs(os.path.join(path_output_dir, "target", "split", "converted.variable
 os.makedirs(os.path.join(path_output_dir, "target", "stat", "original.variables"), exist_ok=True)
 os.makedirs(os.path.join(path_output_dir, "target", "stat", "converted.variables"), exist_ok=True)
 
+# only for inputs, create a subfolder interpolated.variables
+print(f"    {os.path.join(path_output_dir, 'input', 'interpolated.variables')}")
+os.makedirs(os.path.join(path_output_dir, "input", "interpolated.variables"), exist_ok=True)
+
+# define a path variable, it has to store the path of the interpolated variables, it will be used for the interpolation step and for the conversion step, since we want to apply the conversion after the interpolation
+# path_input_interpolated_dir = os.path.join(path_output_dir, "input", "interpolated.variables")
+
+
 
 # SECTION -- SPLIT
 if split_flag:
-    print("Creating configuration files for splitting:")
+
+    # TARGET VARIABLES (ORIGINAL)
     conf_split_target = {
         "data_path": path_target_dir,
         "output_path": os.path.join(path_output_dir, "target", "split", "original.variables"),
@@ -94,30 +103,26 @@ if split_flag:
     }
     with open(os.path.join(path_output_dir, "conf.split.target.json"), "w") as f:
         json.dump(conf_split_target, f, indent=4)
+    print(f"    {os.path.join(path_output_dir, 'conf.split.target.json')}")
+    os.system(f"python split.py --config {os.path.join(path_output_dir, 'conf.split.target.json')}")
+    os.remove(os.path.join(path_output_dir, "conf.split.target.json"))
 
+    # INPUT VARIABLES (INTERPOLATED)
     conf_split_input = {
-        "data_path": path_input_dir,
+        "data_path": os.path.join(path_output_dir, "input", "interpolated.variables"),
         "output_path": os.path.join(path_output_dir, "input", "split", "original.variables"),
         "test_size": test_size,
         "validation_size": validation_size,
         "seed": seed,
     }
     with open(os.path.join(path_output_dir, "conf.split.input.json"), "w") as f:
-        json.dump(conf_split_input, f, indent=4)
-
-    print("Configuration files for splitting created:")
-    print(f"    {os.path.join(path_output_dir, 'conf.split.target.json')}")
+        json.dump(conf_split_input, f, indent=4)    
     print(f"    {os.path.join(path_output_dir, 'conf.split.input.json')}")
-
     print("Calling split script for target and input:")
-    os.system(f"python split.py --config {os.path.join(path_output_dir, 'conf.split.target.json')}")
     os.system(f"python split.py --config {os.path.join(path_output_dir, 'conf.split.input.json')}")
-    os.remove(os.path.join(path_output_dir, "conf.split.target.json"))
     os.remove(os.path.join(path_output_dir, "conf.split.input.json"))
-    print("Configuration files for splitting removed.")
 
-    # converted variables
-    print("Creating configuration files for splitting (CONVERTED VARIABLES):")
+    # TARGET VARIABLES (CONVERTED)
     conf_split_target = {
         "data_path": os.path.join(path_output_dir,"target","converted.variables"),
         "output_path": os.path.join(path_output_dir, "target", "split", "converted.variables"),
@@ -127,6 +132,10 @@ if split_flag:
     }
     with open(os.path.join(path_output_dir, "conf.split.target.json"), "w") as f:
         json.dump(conf_split_target, f, indent=4)
+    os.system(f"python split.py --config {os.path.join(path_output_dir, 'conf.split.target.json')}")
+    os.remove(os.path.join(path_output_dir, "conf.split.target.json"))
+
+    # INPUT VARIABLES (CONVERTED)
     conf_split_input = {
         "data_path": os.path.join(path_output_dir,"input","converted.variables"),
         "output_path": os.path.join(path_output_dir, "input", "split", "converted.variables"),
@@ -136,14 +145,8 @@ if split_flag:
     }
     with open(os.path.join(path_output_dir, "conf.split.input.json"), "w") as f:
         json.dump(conf_split_input, f, indent=4)
-    
-    os.system(f"python split.py --config {os.path.join(path_output_dir, 'conf.split.target.json')}")
-    os.remove(os.path.join(path_output_dir, "conf.split.target.json"))
     os.system(f"python split.py --config {os.path.join(path_output_dir, 'conf.split.input.json')}")
     os.remove(os.path.join(path_output_dir, "conf.split.input.json"))
-
-    print("Configuration files for splitting removed.")
-
 # END OF SECTION -- SPLIT
 
 

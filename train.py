@@ -140,18 +140,19 @@ def train(data_module:ICDataModule, main_net:str, riv_net:bool, conf:obj, output
     if n_var == None:
         n_var = conf.n_var
 
+    riv_out_dim = reduce(lambda x, y: x * y, vars(conf.data_dim).values())
     model = ConvModel(
                     main_net=main_net,
                     n_dimensions=len(vars(conf.data_dim)),
                     riv_net = riv_net,
                     loss = loss,
                     num_channels=n_var,
-                    #riv_in_dim = conf.n_riv,
-                    #riv_out_dim = reduce(lambda x, y: x * y, vars(conf.data_dim).values()),
+                    riv_in_dim = conf.n_riv,
+                    riv_out_dim = riv_out_dim,
                     lr = conf.training.lr
             )
 
-    print("output in train", reduce(lambda x, y: x * y, vars(conf.data_dim).values()))
+    print("output in train", riv_out_dim)
     print(vars(conf.data_dim))
     train_file = os.path.splitext(os.path.basename(train_path))[0]
     best_filename = f'best_{model.name}_{train_file}'

@@ -16,11 +16,11 @@
     "river_train_path": "/leonardo_work/OGS23_PRACE_IT_0/gzuccarino/rivers2/rivers/river_pt_precedenti/rivers_train.pt",
     "river_test_path": "/leonardo_work/OGS23_PRACE_IT_0/gzuccarino/rivers2/rivers/river_pt_precedenti/rivers_test.pt",
     "resume_training": false,
-    "resume_checkpoint_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/04.17.test.dir/best_conv_model_unet_mse_chl_train_dataset-v1.ckpt",
+    "resume_checkpoint_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/04.17.test.dir/best_conv_model_unet_mse_chl_train_dataset.ckpt",
     "training": {
         "loss": "mse",
         "lr": 0.001,
-        "max_epochs": 3,
+        "max_epochs": 2,
         "precision": "bf16-mixed",
         "patience": 10,
         "batch_size": 4,

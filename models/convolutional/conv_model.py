@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import pytorch_lightning as pl
 from models.convolutional.losses import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse
-from models.convolutional.networks import UNet3D_MCD, RiverNet_MCD
+from models.convolutional.networks import UNet3D_MCD
 
 
 class ConvModel(pl.LightningModule):
@@ -10,13 +10,20 @@ class ConvModel(pl.LightningModule):
         Loss function can be either rmse, mse, perceptual.
         The number of channels must consider just the variables (i.e., not the river channel)
     '''
-    def __init__(self, main_net, n_dimensions, riv_net = False, loss = 'rmse', num_channels=1, lr = 1e-3, stats = None):
+    def __init__(self, main_net, n_dimensions, riv_net=False, loss='rmse', num_channels=1, riv_in_dim=None, riv_out_dim=None, lr=1e-3, stats=None):
         super(ConvModel, self).__init__()
 
         self.save_hyperparameters()
         input_channels = num_channels + 1 if riv_net else num_channels
+        if riv_net and (riv_in_dim is None or riv_out_dim is None):
+            raise ValueError("riv_in_dim and riv_out_dim are required when riv_net is enabled.")
 
-        self.main_net = UNet3D_MCD(input_channels = input_channels, output_channels = num_channels)
+        self.main_net = UNet3D_MCD(
+            input_channels=input_channels,
+            output_channels=num_channels,
+            riv_in_dim=riv_in_dim if riv_net else None,
+            riv_out_dim=riv_out_dim if riv_net else None,
+        )
 
         if loss == 'mse':
             self.loss = Masked_MSELoss()

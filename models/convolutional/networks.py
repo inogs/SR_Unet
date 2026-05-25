@@ -5,7 +5,7 @@ from torch.nn.functional import relu
 
 
 class UNet3D_MCD(nn.Module):
-    def __init__(self, input_channels = 1, output_channels=1):
+    def __init__(self, input_channels=1, output_channels=1, riv_in_dim=None, riv_out_dim=None):
         super().__init__()
         # Encoder
         # In the encoder, convolutional layers with the Conv3d function are used to extract features from the input image.
@@ -60,10 +60,14 @@ class UNet3D_MCD(nn.Module):
         # Output layer
         self.outconv = nn.Conv3d(64, output_channels, kernel_size=1)
 
-        self.river_net = RiverNet_MCD(input_size=19, output_size=300*494*27)
+        self.river_net = None
+        if riv_in_dim is not None and riv_out_dim is not None:
+            self.river_net = RiverNet_MCD(input_size=riv_in_dim, output_size=riv_out_dim)
 
     def forward(self, x, riv=None):
         if riv != None:
+            if self.river_net is None:
+                raise ValueError("River data provided, but RiverNet was not configured.")
             riv_chan = self.river_net(riv).reshape((-1,) + x.shape[-3:])
             riv_chan = riv_chan.unsqueeze(1)
             x = torch.cat((x, riv_chan), dim=1)

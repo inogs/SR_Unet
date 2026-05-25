@@ -147,18 +147,19 @@ def mem(tag=""):
 
 def train(data_module:ICDataModule,conf:obj):
 
+    riv_out_dim = reduce(lambda x, y: x * y, vars(conf.data_dim).values())
     model = ConvModel(
                     main_net=conf.main_net,
                     n_dimensions=len(vars(conf.data_dim)),
                     riv_net = conf.river_flag,
                     loss = conf.training.loss,
                     num_channels=conf.n_var,
-                    #riv_in_dim = conf.n_riv,
-                    #riv_out_dim = reduce(lambda x, y: x * y, vars(conf.data_dim).values()),
+                    riv_in_dim = conf.n_riv,
+                    riv_out_dim = riv_out_dim,
                     lr = conf.training.lr
             )
 
-    print("output in train", reduce(lambda x, y: x * y, vars(conf.data_dim).values()))
+    print("output in train", riv_out_dim)
     print(vars(conf.data_dim))
     train_file = os.path.splitext(os.path.basename(conf.var_train_path))[0]
     best_filename = f'best_{model.name}_{train_file}'

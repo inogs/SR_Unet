@@ -274,24 +274,28 @@ def mem(tag=""):
 
 def train(data_module:ICDataModule,conf:obj):
 
+    riv_out_dim = reduce(lambda x, y: x * y, vars(conf.data_dim).values())
     model = ConvModel(
                     main_net=conf.main_net,
                     n_dimensions=len(vars(conf.data_dim)),
                     riv_net = conf.river_flag,
                     loss = conf.training.loss,
                     num_channels=conf.n_var,
-                    #riv_in_dim = conf.n_riv,
-                    #riv_out_dim = reduce(lambda x, y: x * y, vars(conf.data_dim).values()),
+                    riv_in_dim = conf.n_riv,
+                    riv_out_dim = riv_out_dim,
                     lr = conf.training.lr
             )
 
-    print("output in train", reduce(lambda x, y: x * y, vars(conf.data_dim).values()))
+    print("output in train", riv_out_dim)
     print(vars(conf.data_dim))
     train_file = os.path.splitext(os.path.basename(conf.var_train_path))[0]
     best_filename = f'best_{model.name}_{train_file}'
 
+    # create the output directory if it does not exist
     tb_logger = loggers.TensorBoardLogger(save_dir="./")
 
+    # checkpoint callback to save the best model based on validation loss,
+    # with a filename that includes the model name and the training dataset name
     checkpoint_callback = ModelCheckpoint(
         monitor='val_loss',
         mode='min',
@@ -376,7 +380,7 @@ if __name__== "__main__":
         \n[training for variable '{train_dataset_name}'] \t-- loss = {conf.training.loss} \
         \n[training for variable '{train_dataset_name}'] \t-- batch_size = {conf.training.batch_size} \
         \n[training for variable '{train_dataset_name}'] \t-- accumulate_grad_batches = {conf.training.accumulate_grad_batches} \
-        \n[training for variable '{train_dataset_name}'] \t-- effective_batch_size = {effective_batch_size} \
+        \n[training for variable '{train_dataset_name}'] \t-- effective_batch_size (batch_size * accumulate_grad_batches * n_gpus) = {effective_batch_size} \
         \n[training for variable '{train_dataset_name}'] \t-- river_info = {conf.river_flag} \
         \n[training for variable '{train_dataset_name}'] \t-- resume_training = {conf.resume_training} \
         \n[training for variable '{train_dataset_name}'] \t-- resume_checkpoint_path = {conf.resume_checkpoint_path} \

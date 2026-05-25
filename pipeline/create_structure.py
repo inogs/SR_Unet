@@ -4,12 +4,14 @@ import json
 # control flags
 split_flag = False
 stat_flag = False
-make_pt_flag = True
+make_pt_flag = False
+river_flag = True
 
 # three directories, target, input and output
 path_target_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup"
 path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC.interp"
 path_output_dir = "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME"
+path_river_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/rivers"
 conversion_type = "log"
 
 # params: train, test and validation size, seed for reproducibility, number of threads for parallel processing
@@ -88,7 +90,56 @@ os.makedirs(os.path.join(path_output_dir, "input", "interpolated.variables"), ex
 # define a path variable, it has to store the path of the interpolated variables, it will be used for the interpolation step and for the conversion step, since we want to apply the conversion after the interpolation
 # path_input_interpolated_dir = os.path.join(path_output_dir, "input", "interpolated.variables")
 
+if river_flag:
+    print("Creating river subdirectories:")
+   # create a rivers subdirectory inside output directory
+    # create two subdirectories inside it, one for split and one for pt.files
+    print(f"    {os.path.join(path_output_dir, 'rivers')}")
+    print(f"    {os.path.join(path_output_dir, 'rivers', 'split')}")
+    print(f"    {os.path.join(path_output_dir, 'rivers', 'pt.files')}")
+    os.makedirs(os.path.join(path_output_dir, "rivers"), exist_ok=True)
+    os.makedirs(os.path.join(path_output_dir, "rivers", "split"), exist_ok=True)
+    os.makedirs(os.path.join(path_output_dir, "rivers", "pt.files"), exist_ok=True)
 
+    # define a conf_split_river dictionary with the following keys: data_path, output_path, test_size, validation_size, seed
+    conf_split_river = {
+        "data_path": path_river_dir,
+        "output_path": os.path.join(path_output_dir, "rivers", "split"),
+        "test_size": test_size,
+        "validation_size": validation_size,
+        "seed": seed,
+    }
+    with open(os.path.join(path_output_dir, "conf.split.river.json"), "w") as f:
+        json.dump(conf_split_river, f, indent=4)
+    print(f"    {os.path.join(path_output_dir, 'conf.split.river.json')}")
+    os.system(f"python split.py --config {os.path.join(path_output_dir, 'conf.split.river.json')}")
+    os.remove(os.path.join(path_output_dir, "conf.split.river.json"))
+
+    list_pt_types = ["train", "test", "val"]
+    # list_pt_types = ["val"]
+
+    for pt_type in list_pt_types:
+        conf_pt_river = {
+            "input_path": os.path.join(path_output_dir, "rivers", "split", f"rivers.{pt_type}.txt"),
+            "output_path": os.path.join(path_output_dir, "rivers", "pt.files"),
+            "label": pt_type
+        }
+        # print the three keys of the conf_pt_river dictionary
+        print(f"Configuration for pt creation for rivers ({pt_type}):")
+        print(f"    input_path: {conf_pt_river['input_path']}")
+        print(f"    output_path: {conf_pt_river['output_path']}")
+        print(f"    label: {conf_pt_river['label']}")
+
+        conf_pt_river_path = os.path.join(path_output_dir, f"conf.pt.river.{pt_type}.json")
+        with open(conf_pt_river_path, "w") as f:
+            json.dump(conf_pt_river, f, indent=4)
+        print(f"    {conf_pt_river_path}")
+        print("Calling pt creation script for rivers:")
+        os.system(f"python make_pt_rivers.py --config {conf_pt_river_path}")
+        os.remove(conf_pt_river_path)
+        # break
+
+    
 
 # SECTION -- SPLIT
 if split_flag:

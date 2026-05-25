@@ -1,7 +1,0 @@
-{
-  "data_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/AdriaticNC_out",
-  "output_path": "/leonardo_scratch/large/userexternal/gzuccari/",
-  "test_size": 0.2,
-  "validation_size": 0.1,
-  "seed": 42
-}

@@ -96,12 +96,14 @@ class ICDataset(Dataset):
 
 class ICDataModule(pl.LightningDataModule):
 
-    def __init__(self, train_path:str, test_path:str, river_train_path:Optional[str]=None, river_test_path:Optional[str]=None, batch_size:int=32, resize_to_even:bool=False):
+    def __init__(self, train_path:str, test_path:str, val_path:Optional[str]=None, river_train_path:Optional[str]=None, river_test_path:Optional[str]=None, river_val_path:Optional[str]=None, batch_size:int=32, resize_to_even:bool=False):
         super(ICDataModule, self).__init__()
         self.train_path=train_path
         self.test_path=test_path
+        self.val_path=val_path
         self.river_train_path=river_train_path
         self.river_test_path=river_test_path
+        self.river_val_path=river_val_path
         self.batch_size=batch_size
         self.resize_to_even = resize_to_even
 
@@ -119,10 +121,24 @@ class ICDataModule(pl.LightningDataModule):
             else:
                 rivers_ds= None
             ds = ICDataset(tensor_dataset=tensor_ds, rivers_dataset=rivers_ds, resize_to_even=self.resize_to_even)
-            #split in train and validation sets
-            train_size = int(0.9 * len(tensor_ds))
-            val_size = len(tensor_ds) - train_size
-            self.train_ds, self.val_ds = random_split(ds, [train_size, val_size])
+
+            if self.val_path is not None:
+                mem("before loading val dataset")
+                _print_mem("before torch.load val")
+                t0=time.time(); val_tensor_ds=torch.load(self.val_path); print("load_s", time.time()-t0)
+                _print_mem("after torch.load val")
+                mem("after loading val dataset")
+                if self.river_val_path != None:
+                    val_rivers_ds = torch.load(self.river_val_path)
+                else:
+                    val_rivers_ds = None
+                self.train_ds = ds
+                self.val_ds = ICDataset(tensor_dataset=val_tensor_ds, rivers_dataset=val_rivers_ds, resize_to_even=self.resize_to_even)
+            else:
+                #split in train and validation sets
+                train_size = int(0.9 * len(tensor_ds))
+                val_size = len(tensor_ds) - train_size
+                self.train_ds, self.val_ds = random_split(ds, [train_size, val_size])
 
         # Assign Test split(s) for use in Dataloaders
         if stage == "test":

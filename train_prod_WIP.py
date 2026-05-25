@@ -97,8 +97,10 @@ def validate_conf(conf):
         "n_gpus",
         "output_path",
         "var_train_path",
+        "var_val_path",
         "var_test_path",
         "river_train_path",
+        "river_val_path",
         "river_test_path",
         "resume_training",
         "resume_checkpoint_path",
@@ -151,10 +153,12 @@ def validate_conf(conf):
     if not isinstance(conf.output_path, str) or not conf.output_path.strip():
         raise ValueError("Configuration field must be a non-empty path string: output_path")
     _validate_existing_path(conf, "var_train_path")
+    _validate_existing_path(conf, "var_val_path")
     _validate_existing_path(conf, "var_test_path")
 
     if conf.river_flag:
         _validate_existing_path(conf, "river_train_path")
+        _validate_existing_path(conf, "river_val_path")
         _validate_existing_path(conf, "river_test_path")
     if conf.resume_training:
         _validate_existing_path(conf, "resume_checkpoint_path")
@@ -343,8 +347,10 @@ if __name__== "__main__":
 
     data_module = ICDataModule(
             train_path = conf.var_train_path,
+            val_path = conf.var_val_path,
             test_path = conf.var_test_path,
             river_train_path = conf.river_train_path if conf.river_flag else None,
+            river_val_path = conf.river_val_path if conf.river_flag else None,
             river_test_path = conf.river_test_path if conf.river_flag else None,
             batch_size = conf.training.batch_size
     )
@@ -369,8 +375,10 @@ if __name__== "__main__":
         \n[training for variable '{train_dataset_name}'] \t-- seed = {conf.seed} \
         \n[training for variable '{train_dataset_name}'] \t-- model = {conf.main_net} \
         \n[training for variable '{train_dataset_name}'] \t-- train_path = {conf.var_train_path} \
+        \n[training for variable '{train_dataset_name}'] \t-- val_path = {conf.var_val_path} \
         \n[training for variable '{train_dataset_name}'] \t-- test_path = {conf.var_test_path} \
         \n[training for variable '{train_dataset_name}'] \t-- river_train_path = {conf.river_train_path} \
+        \n[training for variable '{train_dataset_name}'] \t-- river_val_path = {conf.river_val_path} \
         \n[training for variable '{train_dataset_name}'] \t-- river_test_path = {conf.river_test_path} \
         \n[training for variable '{train_dataset_name}'] \t-- n_gpus = {conf.n_gpus} \
         \n[training for variable '{train_dataset_name}'] \t-- max_epochs = {conf.training.max_epochs} \

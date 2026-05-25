@@ -100,6 +100,8 @@ def validate_conf(conf):
         "var_test_path",
         "river_train_path",
         "river_test_path",
+        "resume_training",
+        "resume_checkpoint_path",
         "training",
     ]
     required_training_fields = [
@@ -122,6 +124,8 @@ def validate_conf(conf):
         raise ValueError("Configuration field must be a non-negative integer: n_riv")
     if not isinstance(conf.river_flag, bool):
         raise ValueError("Configuration field must be boolean: river_flag")
+    if not isinstance(conf.resume_training, bool):
+        raise ValueError("Configuration field must be boolean: resume_training")
     if not isinstance(conf.seed, int):
         raise ValueError("Configuration field must be an integer: seed")
     if not isinstance(conf.main_net, str) or not conf.main_net.strip():
@@ -152,6 +156,8 @@ def validate_conf(conf):
     if conf.river_flag:
         _validate_existing_path(conf, "river_train_path")
         _validate_existing_path(conf, "river_test_path")
+    if conf.resume_training:
+        _validate_existing_path(conf, "resume_checkpoint_path")
 
     print("Configuration file check: passed")
     for field_name, field_value in sorted(vars(conf).items()):
@@ -294,21 +300,11 @@ def train(data_module:ICDataModule,conf:obj):
         filename=best_filename
     )
 
-    # flag = False
-    # # terminate program here if flag is false
-    # if flag == False:
-    #     print("Terminating program")
-    #     sys.exit(0)
-    
-    # MODIFICA
     metrics_logger = MetricsLogger()
 
-    # trainer = pl.Trainer(detect_anomaly=False, accelerator=accelerator, strategy="ddp_find_unused_parameters_true", log_every_n_steps=20, max_epochs=conf.training.max_epochs, callbacks=[early_stop_callback, checkpoint_callback], logger=tb_logger, check_val_every_n_epoch=1)
     trainer = pl.Trainer(
         accelerator="gpu",
-        # precision="bf16-mixed",
-        # precision="32-true",
-        precision=conf.training.precision, # possible values: "32-true", "16-mixed", "bf16-mixed"
+        precision=conf.training.precision,
         devices=conf.n_gpus,
         strategy="ddp",
         log_every_n_steps=20,
@@ -319,7 +315,10 @@ def train(data_module:ICDataModule,conf:obj):
         accumulate_grad_batches=conf.training.accumulate_grad_batches # possible values: 1, 2, 4, 8, ... (effective batch size = batch_size * accumulate_grad_batches * n_gpus)
     )
 
-    trainer.fit(model, datamodule=data_module)
+    if conf.resume_training:
+        trainer.fit(model, datamodule=data_module, ckpt_path=conf.resume_checkpoint_path)
+    else:
+        trainer.fit(model, datamodule=data_module)
 
     metrics_logger.save_txt()
     metrics_logger.plot()
@@ -338,35 +337,6 @@ if __name__== "__main__":
     conf = read_conf_file(args.config)
     validate_conf(conf)
 
-    # print all the fields in the conf object
-    rprint("n_var: ",conf.n_var)
-    rprint("n_riv: ",conf.n_riv)
-    rprint("river flag:", conf.river_flag)
-    rprint("seed: ",conf.seed)
-    rprint("main net:", conf.main_net)
-
-    # paths
-    rprint("train path:",conf.var_train_path)
-    rprint("test path:",conf.var_test_path)
-    rprint("river train path:",conf.river_train_path)
-    rprint("river test path:",conf.river_test_path)
-
-    # devices
-    rprint("n_gpus (user set):", conf.n_gpus)
-
-    # training parameters
-    rprint("training loss:", conf.training.loss)
-    rprint("training learning rate:", conf.training.lr)
-    rprint("training max_epochs:", conf.training.max_epochs)
-    rprint("training precision:", conf.training.precision)
-    rprint("training patience:", conf.training.patience)
-    rprint("training batch size (from input):", conf.training.batch_size)
-    rprint("training accumulate_grad_batches (from input):", conf.training.accumulate_grad_batches)
-    rprint("effective batch size (batch_size * accumulate_grad_batches * n_gpus):",
-        conf.training.batch_size *
-        conf.training.accumulate_grad_batches *
-        conf.n_gpus)
-
     data_module = ICDataModule(
             train_path = conf.var_train_path,
             test_path = conf.var_test_path,
@@ -376,7 +346,6 @@ if __name__== "__main__":
     )
 
     n_var = data_module.get_numchannels()
-    rprint("n_var from train dataset =", n_var)
     # if n_var != conf.n_var: exit code with error message
     if n_var != conf.n_var:
         print(f"Warning: n_var in conf ({conf.n_var}) does not match number of channels in dataset ({n_var}). Using n_var = {n_var} from dataset.")
@@ -384,19 +353,36 @@ if __name__== "__main__":
     # end if
 
     # put a timer here to check the time taken by the training
+    train_dataset_name = os.path.basename(conf.var_train_path)
+    effective_batch_size = conf.training.batch_size * conf.training.accumulate_grad_batches * conf.n_gpus
     t0 = time.time()
-    rprint(f"[training for dataset '{os.path.basename(conf.var_train_path)}'] Starting execution")
+    rprint(f"[training for dataset '{train_dataset_name}'] Starting execution")
     rprint(
-        f"[training for dataset '{os.path.basename(conf.var_train_path)}'] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% \
-        \n[training for variable '{os.path.basename(conf.var_train_path)}'] \t-- max_epochs = {conf.training.max_epochs} \
-        \n[training for variable '{os.path.basename(conf.var_train_path)}'] \t-- model = {conf.main_net} \
-        \n[training for variable '{os.path.basename(conf.var_train_path)}'] \t-- patience = {conf.training.patience} \
-        \n[training for variable '{os.path.basename(conf.var_train_path)}'] \t-- lr = {conf.training.lr} \
-        \n[training for variable '{os.path.basename(conf.var_train_path)}'] \t-- loss = {conf.training.loss} \
-        \n[training for variable '{os.path.basename(conf.var_train_path)}'] \t-- river_info = {conf.river_flag} \
-        \n[training for variable '{os.path.basename(conf.var_train_path)}'] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+        f"[training for dataset '{train_dataset_name}'] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% \
+        \n[training for variable '{train_dataset_name}'] \t-- n_var = {conf.n_var} \
+        \n[training for variable '{train_dataset_name}'] \t-- n_var_dataset = {n_var} \
+        \n[training for variable '{train_dataset_name}'] \t-- n_riv = {conf.n_riv} \
+        \n[training for variable '{train_dataset_name}'] \t-- seed = {conf.seed} \
+        \n[training for variable '{train_dataset_name}'] \t-- model = {conf.main_net} \
+        \n[training for variable '{train_dataset_name}'] \t-- train_path = {conf.var_train_path} \
+        \n[training for variable '{train_dataset_name}'] \t-- test_path = {conf.var_test_path} \
+        \n[training for variable '{train_dataset_name}'] \t-- river_train_path = {conf.river_train_path} \
+        \n[training for variable '{train_dataset_name}'] \t-- river_test_path = {conf.river_test_path} \
+        \n[training for variable '{train_dataset_name}'] \t-- n_gpus = {conf.n_gpus} \
+        \n[training for variable '{train_dataset_name}'] \t-- max_epochs = {conf.training.max_epochs} \
+        \n[training for variable '{train_dataset_name}'] \t-- precision = {conf.training.precision} \
+        \n[training for variable '{train_dataset_name}'] \t-- patience = {conf.training.patience} \
+        \n[training for variable '{train_dataset_name}'] \t-- lr = {conf.training.lr} \
+        \n[training for variable '{train_dataset_name}'] \t-- loss = {conf.training.loss} \
+        \n[training for variable '{train_dataset_name}'] \t-- batch_size = {conf.training.batch_size} \
+        \n[training for variable '{train_dataset_name}'] \t-- accumulate_grad_batches = {conf.training.accumulate_grad_batches} \
+        \n[training for variable '{train_dataset_name}'] \t-- effective_batch_size = {effective_batch_size} \
+        \n[training for variable '{train_dataset_name}'] \t-- river_info = {conf.river_flag} \
+        \n[training for variable '{train_dataset_name}'] \t-- resume_training = {conf.resume_training} \
+        \n[training for variable '{train_dataset_name}'] \t-- resume_checkpoint_path = {conf.resume_checkpoint_path} \
+        \n[training for variable '{train_dataset_name}'] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
     )
     train(data_module=data_module, conf=conf)
-    rprint(f"[training for variable '{os.path.basename(conf.var_train_path)}'] Ending execution")
+    rprint(f"[training for variable '{train_dataset_name}'] Ending execution")
     t1 = time.time()
-    rprint(f"[training for variable '{os.path.basename(conf.var_train_path)}'] Total time taken: {t1-t0:.2f} seconds")
+    rprint(f"[training for variable '{train_dataset_name}'] Total time taken: {t1-t0:.2f} seconds")

@@ -1,3 +1,5 @@
+# miglioramento: dividere casistica quando ultimi layers copernicus stanno sopra o sotto altezza cadeau 
+
 import os
 import glob
 import sys
@@ -17,7 +19,7 @@ n_processes = comm.Get_size()
 print('rank:', rank)
 
 
-
+# inverti old e new perchè new va fuori la routine e old anderebbe dentro perche serve solo lì
 def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid):
     
     new_lon = new_grid['longitude'][:]
@@ -70,20 +72,21 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
         mask = valid_mask[k]
         values_valid = slice_data[mask]
 
-        # DEBUG 
-        print(f"\n DEBUG LAYER {k}")
+        ########## DEBUG 
+        # print(f"\n DEBUG LAYER {k}")
 
-        print("slice finite:", np.isfinite(slice_data).sum())
-        print("slice nan:", np.isnan(slice_data).sum())
+        # print("slice finite:", np.isfinite(slice_data).sum())
+        # print("slice nan:", np.isnan(slice_data).sum())
 
-        print("mask true count:", mask.sum())
-        print("mask false count:", (~mask).sum())
+        # print("mask true count:", mask.sum())
+        # print("mask false count:", (~mask).sum())
 
-        print("values_valid size:", values_valid.size)
+        # print("values_valid size:", values_valid.size)
 
-        if values_valid.size > 0:
-            print("values_valid min/max:", np.min(values_valid), np.max(values_valid))
+        # if values_valid.size > 0:
+        #     print("values_valid min/max:", np.min(values_valid), np.max(values_valid))
             # print("unique values_valid:", np.unique(values_valid)[:10])  # primi 10
+        ##############
 
         points_valid = np.column_stack([
             LAT_old[mask],
@@ -108,17 +111,17 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
     tmp_lin[tmp_lin > 1e20] = np.nan
 
     # Quali layer verticali della nearest interpolation (tmp_nn) contengono ancora NaN?
-    problem_depths = np.where(np.isnan(tmp_nn).reshape(n_dep_old, -1).any(axis=1))[0]
-    print("\n DEPTH CON NaN IN tmp_nn:", problem_depths)
+    # problem_depths = np.where(np.isnan(tmp_nn).reshape(n_dep_old, -1).any(axis=1))[0]
+    # print("\n DEPTH CON NaN IN tmp_nn:", problem_depths)
 
     # metto il valore di linear se esiste altrimenti metto quello di nearest
     tmp = np.where(np.isnan(tmp_lin), tmp_nn, tmp_lin)
 
     # printo delle informazioni
-    print('sum nan in tmp lin',np.sum(np.isnan(tmp_lin))) # normale che ci siano
-    print('sum nan in tmp nn',np.sum(np.isnan(tmp_nn))) # deve essere 0
-    print(f"Max in tmp nn: {np.nanmax(tmp_nn)}")  # deve essere un valore ragionevole
-    print(f"Max in tmp lin: {np.nanmax(tmp_lin)}") # deve essere un valore ragionevole
+    # print('sum nan in tmp lin',np.sum(np.isnan(tmp_lin))) # normale che ci siano
+    # print('sum nan in tmp nn',np.sum(np.isnan(tmp_nn))) # deve essere 0
+    # print(f"Max in tmp nn: {np.nanmax(tmp_nn)}")  # deve essere un valore ragionevole
+    # print(f"Max in tmp lin: {np.nanmax(tmp_lin)}") # deve essere un valore ragionevole
 
 
     # STEP 3: INTERPOLAZIONE VERTICALE -> lineare
@@ -129,7 +132,7 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
     n_fixed_profiles = 0
     n_unfixable_profiles = 0
 
-
+# CORREZIONE: per make spline non serve ciclo for -> poi reshape
     for i in range(n_lat_new):
         for j in range(n_lon_new):
 
@@ -140,31 +143,31 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
             if had_nan:
                 n_profiles_with_nan += 1
 
-            if np.any(~np.isfinite(profile)):
-                print("\nDEBUG COLONNA CON NaN")
-                print("i, j =", i, j)
+            # if np.any(~np.isfinite(profile)):
+            #     print("\nDEBUG COLONNA CON NaN")
+            #     print("i, j =", i, j)
 
-                print("profile originale:")
-                print(profile)
+            #     print("profile originale:")
+            #     print(profile)
 
-                print("valid mask:")
-                print(np.isfinite(profile))
+            #     print("valid mask:")
+            #     print(np.isfinite(profile))
 
-                print("old_dep:")
-                print(old_dep)
+            #     print("old_dep:")
+            #     print(old_dep)
             ###########
 
             # CORNER CASE -> gestione dei pozzi
             # dove la griglia fine è più profonda della grossolana, propago verso il basso l’ultimo valore oceanico valido disponibile
-            profile = profile.copy()
+            # profile = profile.copy()
             valid = np.isfinite(profile)
 
-            ### debug
+            #### debug
             if not np.any(valid):
                 n_unfixable_profiles += 1
             ####
 
-            # fill sotto
+            # fill sotto --> questo ha senso nel caso in cui la griglia cadeau supera in profondità la griglia copernicus --> non il mio caso attuale in realtà
             last_valid = np.where(valid)[0][-1]
             profile[last_valid+1:] = profile[last_valid]
 
@@ -173,16 +176,16 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
             if had_nan and fixed:
                 n_fixed_profiles += 1
 
-            print("last_valid index:", last_valid)
-            print("last valid depth:", old_dep[last_valid])
+            # print("last_valid index:", last_valid)
+            # print("last valid depth:", old_dep[last_valid])
 
-            print("profile DOPO fill:")
-            print(profile)
+            # print("profile DOPO fill:")
+            # print(profile)
 
-            print("\n===== DEBUG SUMMARY =====")
-            print("profiles con NaN iniziali:", n_profiles_with_nan)
-            print("profiles corretti:", n_fixed_profiles)
-            print("profiles non correggibili:", n_unfixable_profiles)
+            # print("\n===== DEBUG SUMMARY =====")
+            # print("profiles con NaN iniziali:", n_profiles_with_nan)
+            # print("profiles corretti:", n_fixed_profiles)
+            # print("profiles non correggibili:", n_unfixable_profiles)
 
             #############
     
@@ -196,21 +199,19 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
             y = spline(new_dep)
 
             ######### DEBUG 
-            print("new_dep:")
-            print(new_dep)
+            # print("new_dep:")
+            # print(new_dep)
 
-            print("profilo interpolato finale:")
-            print(y)
+            # print("profilo interpolato finale:")
+            # print(y)
 
-            print("nan finali:", np.sum(~np.isfinite(y)))
+            # print("nan finali:", np.sum(~np.isfinite(y)))
             ##############
 
-            # CORNER CASE -> gestione dei valori negativi in superficie e fvìalori fuori range in profondità
-            # extrapolazione costante ai bordi:
-            # sopra la superficie uso il primo valore disponibile,
-            # sotto il fondo uso l'ultimo valore disponibile
+            # CORNER CASE -> gestione dei valori negativi in superficie 
+            # estrapolazione costante ai bordi:
+            # sopra la superficie uso il primo valore disponibile
             y[new_dep < old_dep.min()] = profile[0]
-            y[new_dep > old_dep.max()] = profile[-1]
 
             out[:, i, j] = y
 
@@ -222,7 +223,7 @@ def interpolate_3d(values2interp, old_lon, old_lat, old_dep, new_grid, var_grid)
         dtype=np.float32
     )
 
-    
+    # AGGIUNTA: assert per n_unfixable_profiles 
 
     return interp_data
 
@@ -241,7 +242,7 @@ def interpolate_data(cms_name: str, input_path: str, output_path: str, grid_file
             n_dim (int): number of dimensions of the data; def 3 (dep, lat, lon)
     '''
 
-
+    # if rank == 0 crea cartella --> si aspetta che venga fatto da quel rank
     os.makedirs(output_path, exist_ok=True)
 
     # Open the grid file to get the new dimensions
@@ -272,10 +273,11 @@ def interpolate_data(cms_name: str, input_path: str, output_path: str, grid_file
                 
                 if not os.path.exists(final_file_path):
                     # crea la cartella senza race condition MPI
+                    # CAMBIA -> crei la cartella troppe volte
                     os.makedirs(output_path, exist_ok=True)
-                    # rimuovi eventuale tmp incompleto
+                    # rimuovi eventuale tmp incompleto -> viene comunque eliminato dopo in with nc.Dataset(tmp_file_path, "w") as dest_nc:
                     if os.path.exists(tmp_file_path):
-                        print(f"Removing incomplete file: {tmp_file_path}")
+                        # print(f"Removing incomplete file: {tmp_file_path}")
                         os.remove(tmp_file_path)
 
                 # Create a new NetCDF file for writing

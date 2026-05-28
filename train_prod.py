@@ -170,6 +170,7 @@ def validate_conf(conf):
 class MetricsLogger(pl.Callback):
     def __init__(self):
         super().__init__()
+        self.train_epochs = []
         self.train_losses = []
         self.val_losses = []
         self.val_psnr = []
@@ -180,6 +181,7 @@ class MetricsLogger(pl.Callback):
         metrics = trainer.callback_metrics
         # print(metrics.keys())
         train_loss = metrics.get('train_loss')
+        self.train_epochs.append(epoch)
         if train_loss is not None:
             self.train_losses.append(train_loss.item())
             print(f"Epoch {epoch}: train loss = {train_loss:.4f}")
@@ -211,22 +213,23 @@ class MetricsLogger(pl.Callback):
     
     def save_txt(self, filepath="loss_log.txt"):
         val = list(self.val_losses)
+        epochs = list(self.train_epochs)
         tra = list(self.train_losses)
         if len(val) > len(tra):
             val = val[1:]
 
         with open(filepath, "w") as f:
             f.write("epoch\tval_loss\ttrain_loss\n")
-            for i in range(len(tra)):
-                f.write(f"{i+1}\t{val[i]:.6f}\t{tra[i]:.6f}\n")
+            for epoch, val_loss, train_loss in zip(epochs, val, tra):
+                f.write(f"{epoch}\t{val_loss:.6f}\t{train_loss:.6f}\n")
 
-    def plot(self):
+    def plot(self, filepath="loss_plot.png"):
         val = list(self.val_losses)
+        epochs = list(self.train_epochs)
         tra = list(self.train_losses)
         if len(val) > len(tra):
             val = val[1:]
 
-        epochs = range(1, len(tra)+1)
         plt.figure(figsize=(10,5))
         plt.plot(epochs, tra, label='Train Loss')
         plt.plot(epochs, val, label='Validation Loss')
@@ -237,7 +240,7 @@ class MetricsLogger(pl.Callback):
         plt.grid(True)
         ax = plt.gca()
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        plt.savefig("loss_plot.png")
+        plt.savefig(filepath)
         plt.close()
 
 class obj(object):
@@ -276,7 +279,29 @@ def mem(tag=""):
         gpu = f"CUDA=? ({type(e).__name__})"
     print(f"[MEM] {time.strftime('%F %T')} {tag} :: RSS={rss} | {gpu}", flush=True)
 
+
+def _get_run_epoch_range(conf, metrics_logger):
+    if metrics_logger.train_epochs:
+        return metrics_logger.train_epochs[0], conf.training.max_epochs
+
+    if conf.resume_training:
+        checkpoint = torch.load(conf.resume_checkpoint_path, map_location="cpu")
+        checkpoint_epoch = checkpoint.get("epoch")
+        if checkpoint_epoch is not None:
+            return int(checkpoint_epoch) + 1, conf.training.max_epochs
+
+    return 0, conf.training.max_epochs
+
+
+def _build_epoch_range_filepath(filepath, start_epoch, end_epoch):
+    directory, filename = os.path.split(filepath)
+    stem, extension = os.path.splitext(filename)
+    range_suffix = f"_{start_epoch}.{end_epoch}"
+    return os.path.join(directory, f"{stem}{range_suffix}{extension}")
+
 def train(data_module:ICDataModule,conf:obj):
+
+    os.makedirs(conf.output_path, exist_ok=True)
 
     riv_out_dim = reduce(lambda x, y: x * y, vars(conf.data_dim).values())
     model = ConvModel(
@@ -295,8 +320,7 @@ def train(data_module:ICDataModule,conf:obj):
     train_file = os.path.splitext(os.path.basename(conf.var_train_path))[0]
     best_filename = f'best_{model.name}_{train_file}'
 
-    # create the output directory if it does not exist
-    tb_logger = loggers.TensorBoardLogger(save_dir="./")
+    tb_logger = loggers.TensorBoardLogger(save_dir=conf.output_path)
 
     # checkpoint callback to save the best model based on validation loss,
     # with a filename that includes the model name and the training dataset name
@@ -328,8 +352,20 @@ def train(data_module:ICDataModule,conf:obj):
     else:
         trainer.fit(model, datamodule=data_module)
 
-    metrics_logger.save_txt()
-    metrics_logger.plot()
+    start_epoch, end_epoch = _get_run_epoch_range(conf, metrics_logger)
+    loss_log_path = _build_epoch_range_filepath(
+        os.path.join(conf.output_path, "loss_log.txt"),
+        start_epoch,
+        end_epoch,
+    )
+    loss_plot_path = _build_epoch_range_filepath(
+        os.path.join(conf.output_path, "loss_plot.png"),
+        start_epoch,
+        end_epoch,
+    )
+
+    metrics_logger.save_txt(loss_log_path)
+    metrics_logger.plot(loss_plot_path)
 
 
 

@@ -4,8 +4,8 @@ import json
 # control flags
 split_flag = False
 stat_flag = False
-make_pt_flag = False
-river_flag = True
+make_pt_flag = True
+river_flag = False
 
 # three directories, target, input and output
 path_target_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup"

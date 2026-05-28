@@ -97,7 +97,9 @@ def load_slice(index, file_path, variable, mean_value, std_value):
     with nc.Dataset(file_path) as dataset:
         array = dataset[variable][:]
         array_mask = np.ma.getmaskarray(array)
-        data_slice = np.where(array_mask, 0, (array.data - mean_value) / std_value)
+        valid_mask = ~array_mask
+        data_slice = np.zeros(array.shape, dtype=np.result_type(array.dtype, np.float32))
+        data_slice[valid_mask] = (array.data[valid_mask] - mean_value) / std_value
 
     return index, data_slice
 
@@ -165,5 +167,4 @@ if __name__== "__main__":
     output_file_path = os.path.join(conf.output_path, conf.output_file_name)
     torch.save(torch_ds, output_file_path)
     print(f"    Dataset saved in {output_file_path}")
-
 

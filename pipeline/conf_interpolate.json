@@ -1,0 +1,11 @@
+{
+  "input_path": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC",
+  "output_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST",
+  "grid_file_path": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup/T/T_2006_000.cleanup.nc",
+  "variables": [
+    {
+      "name": "thetao",
+      "grid_variable": "T"
+    }
+  ]
+}

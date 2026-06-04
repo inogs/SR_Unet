@@ -114,7 +114,8 @@ class ConvModel(pl.LightningModule):
         else:
             x, y = test_batch
 
-        mask = (x > 10e4)
+        # prima: mask = (x > 10e4)
+        mask = (x > 10e3)
         x[mask] = 0
 
         if self.river_net is not None:

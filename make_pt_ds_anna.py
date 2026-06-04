@@ -239,8 +239,12 @@ def normalize(ds:np.array, means:np.array, stds:np.array, mask:np.array):
        MASK: array booleano della stessa forma spaziale di un singolo campione, che indica quali elementi devono essere ignorati nella normalizzazione.
        Le posizioni mascherate vengono infine riempite con 1e7 per indicare valori “inutilizzabili”.
     """
+    # print(mask.shape)
     mask = np.repeat(mask, ds.shape[0], axis=0) # Qui la maschera originale, che copre solo le dimensioni spaziali di un singolo campione, viene ripetuta lungo l’asse dei campioni, in modo che corrisponda alla forma completa di ds.
+    # print('mask shape', mask.shape)
     ds = np.ma.masked_array(ds, mask) # crea un array mascherato, dove tutti gli elementi dove mask=True vengono ignorati nelle operazioni matematiche.
+    # print('ds shape', ds.shape)
+    # print(ds.ndim)
     normalized_ds = np.zeros_like(ds, dtype=np.float32)
     # NOTA: questi due cicli for probabilmente potrebbero essere sostituiti con qualocsa di più efficiente
     for i in range(ds.shape[0]):  # Iterate over each data sample
@@ -250,11 +254,12 @@ def normalize(ds:np.array, means:np.array, stds:np.array, mask:np.array):
             else:
                 normalized_ds[i, v, :, :, :] = np.ma.masked_invalid((ds[i, v, :, :, :] - means[v]) / stds[v]).filled(1e7)
 
+
     # # MODIFICA QUI PER DEBUG
     # print("\n[DEBUG normalize] dtype:", ds.dtype)
     # print("[DEBUG normalize] min/max:", ds.min(), ds.max())
     # print("[DEBUG normalize] std min:", np.min(stds))
-
+    # print(normalized_ds.shape)
 
     return normalized_ds.data
 
@@ -390,6 +395,8 @@ def make_var_dataset(data_path:str, save_path: str, var_list:List[str], cms2ogs_
         y_train = normalize(y_train, y_means, y_stds, mask)
         train_torch_ds = TensorDataset(torch.Tensor(x_train), torch.Tensor(y_train))
     if not train_only: # qui normalizzo test o validation -> perchè validation viene "inserito" negli oggetti test
+        print('x shape', x_test.shape)
+        print('mask shape', mask.shape)
         x_test = normalize(x_test, x_means, x_stds, mask)
         y_test = normalize(y_test, y_means, y_stds, mask)
         test_torch_ds = TensorDataset(torch.Tensor(x_test), torch.Tensor(y_test))

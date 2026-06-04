@@ -98,75 +98,78 @@ def get_xy_single_var(cms_path:str, ogs_path:str, cms2ogs_map:Dict[str, str], cm
 
 
 
-
-
 # normalization with for loop -> MANTIENI PER ORA QUESTA FUNZIONE PERCHE' SAI CHE E' CORRETTA ED E' CONCETTULMENTE PIU' SEMPLICE quindi all'nizio va bene
-# def normalize(ds:np.array, means:np.array, stds:np.array, mask:np.array):
-#     """Compute normalization of the dataset, given its mean
-#        and standard deviation.
-#        MASK: array booleano della stessa forma spaziale di un singolo campione, che indica quali elementi devono essere ignorati nella normalizzazione.
-#        Le posizioni mascherate vengono infine riempite con 1e7 per indicare valori “inutilizzabili”.
-#     """
-#     print('input mask shape', mask.shape) # dovrebbe essere (1 = C, 27, 300, 494)
-#     mask = np.repeat(mask, ds.shape[0], axis=0) # Qui la maschera originale, che copre solo le dimensioni spaziali di un singolo campione, viene ripetuta lungo l’asse dei campioni, in modo che corrisponda alla forma completa di ds.
-#     ds = np.ma.masked_array(ds, mask) # crea un array mascherato, dove tutti gli elementi dove mask=True vengono ignorati nelle operazioni matematiche.
-#     normalized_ds = np.zeros_like(ds, dtype=np.float32) # creazione di un 'contenitore' vuoto dove metterci i dati normalizzati
-#     # print('mask shape2:', mask.shape)
-#     # print('ds shape:', ds.shape)
-#     # print(ds.ndim)
-#     # NOTA: questi due cicli for probabilmente potrebbero essere sostituiti con qualocsa di più efficiente -> BROADCASTING ?
-#     for i in range(ds.shape[0]):  # Iterate over each data sample
-#         for v in range(ds.shape[1]):  # Iterate over each channel
+def normalize(ds:np.array, means:np.array, stds:np.array, mask:np.array):
+    """Compute normalization of the dataset, given its mean
+       and standard deviation.
+       MASK: array booleano della stessa forma spaziale di un singolo campione, che indica quali elementi devono essere ignorati nella normalizzazione.
+       Le posizioni mascherate vengono infine riempite con 1e7 per indicare valori “inutilizzabili”.
+    """
+    print('input mask shape', mask.shape) # dovrebbe essere (1 = C, 27, 300, 494)
+    mask = np.repeat(mask, ds.shape[0], axis=0) # Qui la maschera originale, che copre solo le dimensioni spaziali di un singolo campione, viene ripetuta lungo l’asse dei campioni, in modo che corrisponda alla forma completa di ds.
+    ds = np.ma.masked_array(ds, mask) # crea un array mascherato, dove tutti gli elementi dove mask=True vengono ignorati nelle operazioni matematiche.
+    print("[DEBUG not normalized] min/max:", np.min(np.ma.masked_array(ds, mask)), np.max(np.ma.masked_array(ds, mask)))
 
-#            normalized_ds[i, v, :, :, :] = np.ma.masked_invalid(np.ma.divide((ds[i, v, :, :, :] - means[v]), stds[v])).filled(1e7) # maschera eventuali valori nan o inf e sostituisce i valori mascherati con 1e7
+    normalized_ds = np.zeros_like(ds, dtype=np.float32) # creazione di un 'contenitore' vuoto dove metterci i dati normalizzati
+    # print('mask shape2:', mask.shape)
+    # print('ds shape:', ds.shape)
+    # print(ds.ndim)
+    # NOTA: questi due cicli for probabilmente potrebbero essere sostituiti con qualocsa di più efficiente -> BROADCASTING ?
+    for i in range(ds.shape[0]):  # Iterate over each data sample
+        print("[DEBUG not normalized] min/max:", np.min(np.ma.masked_array(ds, mask)), np.max(np.ma.masked_array(ds, mask)))
 
-#     # print('output shape:', normalized_ds.shape)
-#     # print("\n[DEBUG masked array] dtype:", ds.dtype)
-#     # print("[DEBUG masked array] min/max:", np.min(ds), np.max(ds))
-#     # print("[DEBUG] std, mean", stds, means)
+        for v in range(ds.shape[1]):  # Iterate over each channel
+           
+            # aggiungi where per ignorare maschere --> prova sia mask che ~mask !!!
+           normalized_ds[i, v, :, :, :] = np.ma.masked_invalid(np.ma.divide((ds[i, v, :, :, :] - means[v]), stds[v])).filled(1e7) # maschera eventuali valori nan o inf e sostituisce i valori mascherati con 1e7
+
+    # print('output shape:', normalized_ds.shape)
+    # print("\n[DEBUG masked array] dtype:", ds.dtype)
+    # print("[DEBUG masked array] min/max:", np.min(ds), np.max(ds))
+    # print("[DEBUG] std, mean", stds, means)
     
-#     # print("\n[DEBUG normalized ds] dtype:", normalized_ds.dtype)
-#     # print("[DEBUG normalized ds] min/max:", np.min(normalized_ds), np.max(normalized_ds))
+    # print("\n[DEBUG normalized ds] dtype:", normalized_ds.dtype)
+    # print("[DEBUG normalized ds] min/max:", np.min(normalized_ds), np.max(normalized_ds))
 
-#     # print("[DEBUG normalized ds mascherato] min/max:", np.min(np.ma.masked_array(normalized_ds, mask)), np.max(np.ma.masked_array(normalized_ds, mask)))
+    # print("[DEBUG normalized ds mascherato] min/max:", np.min(np.ma.masked_array(normalized_ds, mask)), np.max(np.ma.masked_array(normalized_ds, mask)))
 
-
-#     return normalized_ds.data
+    return normalized_ds.data
 
 
 
 # NORMALIZE CHE NON DA' ERRORE DI OVERFLOW
-def normalize(ds: np.array, means: np.array, stds: np.array, mask: np.array):
-    # ripeti la mask lungo i campioni
-    mask_full = np.repeat(mask, ds.shape[0], axis=0)
+# def normalize(ds: np.array, means: np.array, stds: np.array, mask: np.array):
+#     print()
+#     # ripeti la mask lungo i campioni
+#     mask_full = np.repeat(mask, ds.shape[0], axis=0)
     
-    # crea array mascherato
-    ds_masked = np.ma.masked_array(ds, mask_full)
+#     # crea array mascherato
+#     ds_masked = np.ma.masked_array(ds, mask_full)
     
-    # prepara contenitore finale
-    normalized_ds = np.zeros_like(ds, dtype=np.float32)
+#     # prepara contenitore finale
+#     normalized_ds = np.zeros_like(ds, dtype=np.float32)
     
-    for i in range(10):
-        for v in range(ds.shape[1]):
-            # operazioni solo sui valori non mascherati
-            valid_data = ds_masked[i, v, :, :, :].compressed()  # prendi solo valori non mascherati
-            if valid_data.size > 0:
-                normalized_values = (valid_data - means[v]) / stds[v]
-            else:
-                print('No valid data')
+#     for i in range(10):
+#         for v in range(ds.shape[1]):
+#             # operazioni solo sui valori non mascherati
+#             valid_data = ds_masked[i, v, :, :, :].compressed()  # prendi solo valori non mascherati
+#             if valid_data.size > 0:
+#                 normalized_values = (valid_data - means[v]) / stds[v]
+#             else:
+#                 print('No valid data')
             
-            # ricostruisci l'array completo con 1e7 per i mascherati
-            temp = np.full(ds_masked[i, v, :, :, :].shape, 1e7, dtype=np.float32)
-            temp[~ds_masked[i, v, :, :, :].mask] = normalized_values
-            normalized_ds[i, v, :, :, :] = temp
+#             # ricostruisci l'array completo con 1e7 per i mascherati
+#             temp = np.full(ds_masked[i, v, :, :, :].shape, 1e7, dtype=np.float32)
+#             temp[~ds_masked[i, v, :, :, :].mask] = normalized_values
+#             normalized_ds[i, v, :, :, :] = temp
 
-        print(i)
-        print("[DEBUG normalized ds con maschera] min/max:", np.min(normalized_ds), np.max(normalized_ds))
-        print("[DEBUG normalized ds solo valori mascherati] min/max:", np.ma.masked_array(normalized_ds, mask_full).max(), np.ma.masked_array(normalized_ds, mask_full).min())
-        print("[DEBUG normalized ds solo valori mascherati] min/max:", ds_masked.data.max(), ds_masked.data.min())
-        print()
+#         print(i)
+#         print("[DEBUG normalized ds con maschera] min/max:", np.min(normalized_ds), np.max(normalized_ds))
+#         print("[DEBUG normalized ds solo valori mascherati] min/max:", np.ma.masked_array(normalized_ds, mask_full).max(), np.ma.masked_array(normalized_ds, mask_full).min())
+#         print("[DEBUG normalized ds solo valori mascherati] min/max:", ds_masked.data.max(), ds_masked.data.min())
+#         print()
 
-    return normalized_ds
+#     return normalized_ds
 
 
 

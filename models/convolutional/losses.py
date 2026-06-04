@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import torchvision
 from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio
+import numpy as np
 
 from utils.train_utils import calc_psnr
 
@@ -20,9 +21,14 @@ def masked_ssim(pred, gt, mask):
     ssim = StructuralSimilarityIndexMeasure().to(accelerator)
     return ssim(pred, gt)
 
+# DENORMALIZZATA 
 def masked_rmse(pred, gt, mask, stat=None):
     if stat is None:
-        stat = [0, 1]
+        # MODIFICO altrimenti non posso fare stat[,]
+        # aggiungo np.array() -> forse non serve più
+        # prima: stat = [0, 1]
+        stat = np.array([[0, 1]]) # se non gli passo stat vuol dire che i dati non sono normalizzati e quindi moltiplico per 1 e aggiungo 0?
+    # print(stat[0,1])
     # MODIFICA: commentata la riga seguente e aggiunta quella sotto
     # masked_pred = (pred[~mask] * stat[1]) + stat[0]
     masked_pred = (pred[~mask] * stat[0, 1]) + stat[0, 0]
@@ -137,7 +143,8 @@ class VGGPerceptualLoss(torch.nn.Module):
             channel_losses.append(loss)
         losses_tensor = torch.stack(channel_losses)
         return torch.mean(losses_tensor)
-
+    
+# dovrebbe essere quella a cui passo i valori normalizzati -> loss normalizzata -> la uso nel TRAINING
 class Masked_MSELoss(nn.Module):
     def __init__(self):
         super(Masked_MSELoss, self).__init__()
@@ -148,6 +155,7 @@ class Masked_MSELoss(nn.Module):
         mse = nn.MSELoss()(masked_pred, masked_y)
         return mse
 
+# dovrebbe essere quella a cui passo i valori normalizzati -> loss normalizzata -> la uso nel TRAINING
 class Masked_RMSELoss(nn.Module):
     def __init__(self):
         super(Masked_RMSELoss, self).__init__()

@@ -115,7 +115,7 @@ def predict(prediction_dir, test_path, weight_file, data_path, var, riv):
 
     stats = []
     for i in range(len(var)):
-        with open(f'{data_path}/statistics/ogs/stat_ogs_{var[i]}.txt', 'r') as file:
+        with open(f'{data_path}/statistics/ogs/stat_ogs_{var[i]}.txt', 'r') as file: # PRENDO LE STAT DAI FILE .TXT
             line_elements = []
             for line in file:
                 if line.strip():
@@ -137,7 +137,7 @@ def predict(prediction_dir, test_path, weight_file, data_path, var, riv):
         #print("prediction", torch.max(prediction))
 
         for v in range(len(var)):
-            pred_var = (prediction[:, v, :, :, :] * stats[v][1]) + stats[v][0]
+            pred_var = (prediction[:, v, :, :, :] * stats[v][1]) + stats[v][0] # DENORMALIZZAZIONE 
 
             filename = file_names[v][i]
 

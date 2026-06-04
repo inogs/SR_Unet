@@ -1,6 +1,6 @@
 {
-  "folder_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/Chla/",
-  "output_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/Chla.log/",
+  "folder_path": "/leonardo/home/userexternal/adelsavi/git/codice_fede/pipeline/po4_2006_cms",
+  "output_path": "/leonardo/home/userexternal/adelsavi/git/codice_fede/pipeline/output_po4_log_cms",
   "conversion_type": "log",
-  "variable_name": "Chla"
+  "variable_name": "po4"
 }

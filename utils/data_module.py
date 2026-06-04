@@ -132,7 +132,7 @@ class ICDataModule(pl.LightningDataModule):
                                            batch_size=self.batch_size,
                                            num_workers=4,
                                            pin_memory=True,
-                                           shuffle = False)
+                                           shuffle = False) # Validation datasets should not be shuffled in most cases to ensure consistent metrics between epochs, unless you are doing something like test-time augmentation.
 
     def test_dataloader(self):
         return torch.utils.data.DataLoader(self.test_ds,

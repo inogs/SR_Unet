@@ -1,0 +1,11 @@
+{
+    "path_target": "/path/to/target/files.txt",
+    "path_input": "/path/to/input/files.txt",
+    "stat_target": "/path/to/stat.target.txt",
+    "stat_input": "/path/to/stat.input.txt",
+    "var_target": "thetao",
+    "var_input": "thetao",
+    "output_path": "/path/to/output/folder",
+    "output_file_name": "dataset.pt",
+    "n_workers": 4
+}

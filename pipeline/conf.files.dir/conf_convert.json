@@ -1,0 +1,6 @@
+{
+    "folder_path": "/path/to/input/netcdf/folder",
+    "output_path": "/path/to/output/folder",
+    "conversion_type": "log",
+    "variable_name": "thetao"
+}

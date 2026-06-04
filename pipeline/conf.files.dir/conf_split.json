@@ -1,0 +1,7 @@
+{
+    "data_path": "/path/to/input/folder",
+    "output_path": "/path/to/output/folder",
+    "test_size": 0.2,
+    "validation_size": 0.1,
+    "seed": 42
+}

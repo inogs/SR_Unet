@@ -113,7 +113,8 @@ def interpolate_3d(values2interp: np.array, old_lon:np.array, old_lat:np.array, 
     values = masked_data[valid_mask]  # Only valid data values
 
     # Create new points on the target grid for interpolation
-    grid_points = np.vstack((new_lon.ravel(), new_lat.ravel(), new_dep.ravel())).T
+    # vstuck concatena luno il primo asse, verticalmente cioè mette tutto nella stessa colonna
+    grid_points = np.vstack((new_lon.ravel(), new_lat.ravel(), new_dep.ravel())).T # ravel() functions returns contiguous flattened array(1D array with all the input-array elements and with the same type as i
 
     # Perform nearest neighbor interpolation
     interp_data = intrp.griddata(points, values, grid_points, method='nearest')

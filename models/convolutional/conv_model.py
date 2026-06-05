@@ -50,17 +50,17 @@ class ConvModel(pl.LightningModule):
         return optimizer
     
     #### MODIFICA
-    # def enable_dropout(self):
-        # for m in self.modules(): # itera per i sottomoduli della rete es. e1, e2 etc
-        #     if isinstance(m, nn.Dropout): #controlla se il modulo corrente è un oggetto di tipo nn.Dropout
-        #         m.train() # usa .train() invece che .eval() solo per il dropout -> lo attiva anche se si è nella validation 
-
     def enable_dropout(self):
-        for name, m in self.named_modules(): # itera per i sottomoduli della rete es. e1, e2 etc
+        for m in self.modules(): # itera per i sottomoduli della rete es. e1, e2 etc
             if isinstance(m, nn.Dropout): #controlla se il modulo corrente è un oggetto di tipo nn.Dropout
                 m.train() # usa .train() invece che .eval() solo per il dropout -> lo attiva anche se si è nella validation 
-                # controllo che funzioni
-                print(f"{name}: training={m.training}")
+
+    # def enable_dropout(self):
+    #     for name, m in self.named_modules(): # itera per i sottomoduli della rete es. e1, e2 etc
+    #         if isinstance(m, nn.Dropout): #controlla se il modulo corrente è un oggetto di tipo nn.Dropout
+    #             m.train() # usa .train() invece che .eval() solo per il dropout -> lo attiva anche se si è nella validation 
+    #             # controllo che funzioni
+    #             print(f"{name}: training={m.training}")
     #############
 
     def training_step(self, train_batch, batch_idx):

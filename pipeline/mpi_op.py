@@ -2,15 +2,15 @@ import json
 import subprocess
 import os
 
-interp_flag = False
+interp_flag = True
 conversion_flag = True
 
 path_target_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup"
 # path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC.interp"
 path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC"
-path_output_dir = "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME"
+path_output_dir = "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME_1"
 conversion_type = "log"
-number_of_processes = 16
+number_of_processes = 32
 
 # given the output path, check that exists, if not return error message
 if not os.path.exists(path_output_dir):

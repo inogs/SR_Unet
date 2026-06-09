@@ -10,7 +10,7 @@ river_flag = False
 # three directories, target, input and output
 path_target_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup"
 path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC.interp"
-path_output_dir = "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME"
+path_output_dir = "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME_1"
 path_river_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/rivers"
 conversion_type = "log"
 

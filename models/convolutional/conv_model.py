@@ -57,7 +57,7 @@ class ConvModel(pl.LightningModule):
 
     def enable_dropout(self):
         for name, m in self.named_modules(): # itera per i sottomoduli della rete es. e1, e2 etc
-            if isinstance(m, nn.Dropout): #controlla se il modulo corrente è un oggetto di tipo nn.Dropout
+            if isinstance(m, (nn.Dropout, nn.Dropout1d, nn.Dropout2d, nn.Dropout3d)): #controlla se il modulo corrente è un oggetto di tipo nn.Dropout
                 m.train() # usa .train() invece che .eval() solo per il dropout -> lo attiva anche se si è nella validation 
                 # controllo che funzioni
                 print(f"{name}: training={m.training}")
@@ -75,9 +75,13 @@ class ConvModel(pl.LightningModule):
         else:
             x, y = train_batch
 
-        mask = (x > 10e3).detach()
-        x[mask] = 0
-        x = x.detach()
+        mask = (x > 10e3).detach() # booleano non ha bisogno del .detach()
+        # MODIFICA
+        #x[mask] = 0
+        x = torch.where(mask, torch.zeros_like(x), x)
+        ##
+        x = x.detach() # se x proviene dal dataloader non servirebbe il detach perchè c'è già requires_grad = False 
+
 
         if self.river_net is not None:
             riv_mask = mask[:, 0:1, :, :].detach() #extract mask of shape (bs, 1, h, w)
@@ -106,7 +110,11 @@ class ConvModel(pl.LightningModule):
             x, y = val_batch
 
         mask = (x > 10e3)
-        x[mask] = 0
+        # MODIFICA
+        # x[mask] = 0 
+        x = torch.where(mask, torch.zeros_like(x), x)
+        ####
+
 
         if self.river_net is not None:
             riv_mask = mask[:, 0:1, :, :] #extract mask of shape (bs, 1, h, w)

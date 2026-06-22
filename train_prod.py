@@ -124,7 +124,13 @@ def validate_conf(conf):
         "river_test_path",
         "resume_training",
         "resume_checkpoint_path",
+        "shuffle",
         "training",
+    ]
+    required_shuffle_fields = [
+        "train",
+        "val",
+        "test",
     ]
     required_training_fields = [
         "loss",
@@ -138,6 +144,7 @@ def validate_conf(conf):
     ]
 
     _require_fields(conf, required_fields)
+    _require_fields(conf.shuffle, required_shuffle_fields, prefix="conf.shuffle")
     _require_fields(conf.training, required_training_fields, prefix="conf.training")
 
     _validate_positive_int(conf, "n_var")
@@ -153,6 +160,10 @@ def validate_conf(conf):
         raise ValueError("Configuration field must be an integer: seed")
     if not isinstance(conf.main_net, str) or not conf.main_net.strip():
         raise ValueError("Configuration field must be a non-empty string: main_net")
+    for field_name in required_shuffle_fields:
+        field_value = getattr(conf.shuffle, field_name)
+        if not isinstance(field_value, bool):
+            raise ValueError(f"Configuration field must be boolean: shuffle.{field_name}")
 
     if not vars(conf.data_dim):
         raise ValueError("Configuration field data_dim must contain at least one dimension")
@@ -410,7 +421,10 @@ if __name__== "__main__":
             river_val_path = conf.river_val_path if conf.river_flag else None,
             river_test_path = conf.river_test_path if conf.river_flag else None,
             train_batch_size = conf.training.train_batch_size,
-            val_batch_size = conf.training.val_batch_size
+            val_batch_size = conf.training.val_batch_size,
+            train_shuffle = conf.shuffle.train,
+            val_shuffle = conf.shuffle.val,
+            test_shuffle = conf.shuffle.test
     )
 
     n_var = data_module.get_numchannels()
@@ -449,6 +463,9 @@ if __name__== "__main__":
         \n[training for variable '{train_dataset_name}'] \t-- loss = {conf.training.loss} \
         \n[training for variable '{train_dataset_name}'] \t-- train_batch_size = {conf.training.train_batch_size} \
         \n[training for variable '{train_dataset_name}'] \t-- val_batch_size = {conf.training.val_batch_size} \
+        \n[training for variable '{train_dataset_name}'] \t-- train_shuffle = {conf.shuffle.train} \
+        \n[training for variable '{train_dataset_name}'] \t-- val_shuffle = {conf.shuffle.val} \
+        \n[training for variable '{train_dataset_name}'] \t-- test_shuffle = {conf.shuffle.test} \
         \n[training for variable '{train_dataset_name}'] \t-- accumulate_grad_batches = {conf.training.accumulate_grad_batches} \
         \n[training for variable '{train_dataset_name}'] \t-- effective_train_batch_size (train_batch_size * accumulate_grad_batches * n_gpus) = {effective_train_batch_size} \
         \n[training for variable '{train_dataset_name}'] \t-- river_info = {conf.river_flag} \

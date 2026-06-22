@@ -19,6 +19,11 @@
     "river_test_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/rivers/pt.files/rivers_test.pt",
     "resume_training": false,
     "resume_checkpoint_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/04.17.test.dir/best_conv_model_unet_mse_chl_train_dataset.ckpt",
+    "shuffle": {
+        "train": true,
+        "val": false,
+        "test": false
+    },
     "training": {
         "loss": "mse",
         "lr": 0.001,

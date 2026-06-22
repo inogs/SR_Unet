@@ -25,7 +25,8 @@
         "max_epochs": 2,
         "precision": "bf16-mixed",
         "patience": 10,
-        "batch_size": 4,
+        "train_batch_size": 4,
+        "val_batch_size": 4,
         "accumulate_grad_batches": 1
     }
 }

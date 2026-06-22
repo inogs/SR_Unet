@@ -96,7 +96,7 @@ class ICDataset(Dataset):
 
 class ICDataModule(pl.LightningDataModule):
 
-    def __init__(self, train_path:str, test_path:str, val_path:Optional[str]=None, river_train_path:Optional[str]=None, river_test_path:Optional[str]=None, river_val_path:Optional[str]=None, batch_size:int=32, resize_to_even:bool=False):
+    def __init__(self, train_path:str, test_path:str, val_path:Optional[str]=None, river_train_path:Optional[str]=None, river_test_path:Optional[str]=None, river_val_path:Optional[str]=None, train_batch_size:int=32, val_batch_size:int=32, resize_to_even:bool=False):
         super(ICDataModule, self).__init__()
         self.train_path=train_path
         self.test_path=test_path
@@ -104,7 +104,8 @@ class ICDataModule(pl.LightningDataModule):
         self.river_train_path=river_train_path
         self.river_test_path=river_test_path
         self.river_val_path=river_val_path
-        self.batch_size=batch_size
+        self.train_batch_size=train_batch_size
+        self.val_batch_size=val_batch_size
         self.resize_to_even = resize_to_even
 
     def setup(self, stage:str):
@@ -158,14 +159,14 @@ class ICDataModule(pl.LightningDataModule):
 
     def train_dataloader(self):
         # return torch.utils.data.DataLoader(self.train_ds,
-        #                                    batch_size=self.batch_size,
+        #                                    batch_size=self.train_batch_size,
         #                                    num_workers=8,
         #                                    pin_memory=True,
         #                                    shuffle = True
         #                                    )
         return torch.utils.data.DataLoader(
                                             self.train_ds,
-                                            batch_size=self.batch_size,
+                                            batch_size=self.train_batch_size,
                                             num_workers=8,
                                             pin_memory=True,
                                             shuffle=False,
@@ -174,7 +175,7 @@ class ICDataModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         return torch.utils.data.DataLoader(self.val_ds,
-                                           batch_size=self.batch_size,
+                                           batch_size=self.val_batch_size,
                                            num_workers=8,
                                            pin_memory=True,
                                            shuffle = False)

@@ -8,6 +8,7 @@ import os
 import time
 import sys
 import argparse
+import subprocess
 from pathlib import Path
 from functools import reduce
 from types import SimpleNamespace
@@ -36,6 +37,25 @@ device = torch.device(accelerator)
 @rank_zero_only
 def rprint(*args, **kwargs):
     print(*args, **kwargs)
+
+
+def get_git_metadata():
+    repo_path = Path(__file__).resolve().parent
+    try:
+        branch = subprocess.check_output(
+            ["git", "-C", str(repo_path), "branch", "--show-current"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        commit = subprocess.check_output(
+            ["git", "-C", str(repo_path), "rev-parse", "--short", "HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return "unknown", "unknown"
+
+    return branch or "detached", commit or "unknown"
 
 
 def parse_input_parameters():
@@ -112,7 +132,8 @@ def validate_conf(conf):
         "max_epochs",
         "precision",
         "patience",
-        "batch_size",
+        "train_batch_size",
+        "val_batch_size",
         "accumulate_grad_batches",
     ]
 
@@ -145,7 +166,7 @@ def validate_conf(conf):
         raise ValueError("Configuration field training.precision must be one of: 32-true, 16-mixed, bf16-mixed")
     if not isinstance(conf.training.lr, (int, float)) or conf.training.lr <= 0:
         raise ValueError("Configuration field must be a positive number: training.lr")
-    for field_name in ["max_epochs", "patience", "batch_size", "accumulate_grad_batches"]:
+    for field_name in ["max_epochs", "patience", "train_batch_size", "val_batch_size", "accumulate_grad_batches"]:
         field_value = getattr(conf.training, field_name)
         if not isinstance(field_value, int) or field_value <= 0:
             raise ValueError(f"Configuration field must be a positive integer: training.{field_name}")
@@ -388,7 +409,8 @@ if __name__== "__main__":
             river_train_path = conf.river_train_path if conf.river_flag else None,
             river_val_path = conf.river_val_path if conf.river_flag else None,
             river_test_path = conf.river_test_path if conf.river_flag else None,
-            batch_size = conf.training.batch_size
+            train_batch_size = conf.training.train_batch_size,
+            val_batch_size = conf.training.val_batch_size
     )
 
     n_var = data_module.get_numchannels()
@@ -400,11 +422,14 @@ if __name__== "__main__":
 
     # put a timer here to check the time taken by the training
     train_dataset_name = os.path.basename(conf.var_train_path)
-    effective_batch_size = conf.training.batch_size * conf.training.accumulate_grad_batches * conf.n_gpus
+    git_branch, git_commit = get_git_metadata()
+    effective_train_batch_size = conf.training.train_batch_size * conf.training.accumulate_grad_batches * conf.n_gpus
     t0 = time.time()
     rprint(f"[training for dataset '{train_dataset_name}'] Starting execution")
     rprint(
         f"[training for dataset '{train_dataset_name}'] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% \
+        \n[training for variable '{train_dataset_name}'] \t-- git_branch = {git_branch} \
+        \n[training for variable '{train_dataset_name}'] \t-- git_commit = {git_commit} \
         \n[training for variable '{train_dataset_name}'] \t-- n_var = {conf.n_var} \
         \n[training for variable '{train_dataset_name}'] \t-- n_var_dataset = {n_var} \
         \n[training for variable '{train_dataset_name}'] \t-- n_riv = {conf.n_riv} \
@@ -422,9 +447,10 @@ if __name__== "__main__":
         \n[training for variable '{train_dataset_name}'] \t-- patience = {conf.training.patience} \
         \n[training for variable '{train_dataset_name}'] \t-- lr = {conf.training.lr} \
         \n[training for variable '{train_dataset_name}'] \t-- loss = {conf.training.loss} \
-        \n[training for variable '{train_dataset_name}'] \t-- batch_size = {conf.training.batch_size} \
+        \n[training for variable '{train_dataset_name}'] \t-- train_batch_size = {conf.training.train_batch_size} \
+        \n[training for variable '{train_dataset_name}'] \t-- val_batch_size = {conf.training.val_batch_size} \
         \n[training for variable '{train_dataset_name}'] \t-- accumulate_grad_batches = {conf.training.accumulate_grad_batches} \
-        \n[training for variable '{train_dataset_name}'] \t-- effective_batch_size (batch_size * accumulate_grad_batches * n_gpus) = {effective_batch_size} \
+        \n[training for variable '{train_dataset_name}'] \t-- effective_train_batch_size (train_batch_size * accumulate_grad_batches * n_gpus) = {effective_train_batch_size} \
         \n[training for variable '{train_dataset_name}'] \t-- river_info = {conf.river_flag} \
         \n[training for variable '{train_dataset_name}'] \t-- resume_training = {conf.resume_training} \
         \n[training for variable '{train_dataset_name}'] \t-- resume_checkpoint_path = {conf.resume_checkpoint_path} \

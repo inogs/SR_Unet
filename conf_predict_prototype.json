@@ -2,6 +2,7 @@
     "weight_file": "/leonardo_scratch/large/userexternal/gzuccari/TEST/05.28.test.dir/out1/best_conv_model_unet_mse_chl.Chla.train.dataset.ckpt",
     "test_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/pt.files/chl.Chla.test.dataset.pt",
     "output_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/predictions",
+    "prediction_subdir": "chl.Chla",
     "variables": ["chl"],
     "reference_nc_lists": {
         "chl": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/input/split/original.variables/chl.test.txt"

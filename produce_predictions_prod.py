@@ -38,6 +38,15 @@ def check_output_path(path):
         raise ValueError(f"output_path exists but is not a directory: {path}")
 
 
+def check_output_subdir(path):
+    if path is None:
+        return
+    if not isinstance(path, str) or not path.strip():
+        raise ValueError("prediction_subdir must be a non-empty string")
+    if os.path.isabs(path) or ".." in path.split(os.sep):
+        raise ValueError("prediction_subdir must be relative and cannot contain '..'")
+
+
 def read_file_list(list_path):
     with open(list_path, "r") as file:
         return [line.strip() for line in file if line.strip()]
@@ -60,6 +69,7 @@ def validate_conf(conf):
     check_file(conf["test_path"], "test_path")
     check_file(conf.get("river_path"), "river_path")
     check_output_path(conf["output_path"])
+    check_output_subdir(conf.get("prediction_subdir"))
 
     for var in conf["variables"]:
         if var not in conf["reference_nc_lists"]:
@@ -195,7 +205,11 @@ def predict(conf):
     model.eval()
     model.to(device)
 
-    os.makedirs(conf["output_path"], exist_ok=True)
+    output_path = conf["output_path"]
+    if conf.get("prediction_subdir"):
+        output_path = os.path.join(output_path, conf["prediction_subdir"])
+
+    os.makedirs(output_path, exist_ok=True)
     with torch.no_grad():
         for start in range(0, x.shape[0], conf["batch_size"]):
             stop = min(start + conf["batch_size"], x.shape[0])
@@ -214,7 +228,7 @@ def predict(conf):
                     pred_var = prediction[sample_offset, var_index] * std + mean
                     write_prediction(
                         reference_files[var][sample_index],
-                        conf["output_path"],
+                        output_path,
                         var,
                         pred_var,
                     )

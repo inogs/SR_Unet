@@ -1,12 +1,12 @@
 {
     "n_var" : 1,
     "n_riv" : 19,
-    "var_train_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/chl_train_dataset.pt",
-    "var_val_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/chl_val_dataset.pt",
-    "var_test_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/chl_test_dataset.pt",
-    "river_train_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_train.pt",
-    "river_val_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_val.pt",
-    "river_test_path": "/leonardo_work/OGS23_PRACE_IT_0/adelsavio/rivers/rivers_test.pt",
+    "var_train_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/pt.files/chl.Chla.train.dataset.pt",
+    "var_val_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/pt.files/chl.Chla.val.dataset.pt",
+    "var_test_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/pt.files/chl.Chla.test.dataset.pt",
+    "river_train_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/rivers/pt.files/rivers_train.pt",
+    "river_val_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/rivers/pt.files/rivers_val.pt",
+    "river_test_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/rivers/pt.files/rivers_test.pt",
     "seed" : 0,
     "training" : {
         "loss" : "mse",

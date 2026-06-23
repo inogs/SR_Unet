@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import pytorch_lightning as pl
-from models.convolutional.losses import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse
+from models.convolutional.losses_bkp import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse, masked_rmse_relative
 from models.convolutional.networks import UNet3D_MCD, RiverNet_MCD
 import numpy as np
 
@@ -129,7 +129,9 @@ class ConvModel(pl.LightningModule):
         ssim_score = masked_ssim(pred, y, mask)
         if self.stats is not None:
             rmse_score = masked_rmse(pred, y, mask, self.stats)
+            r_rmse_score = masked_rmse_relative(pred, y, mask, self.stats)
             self.log('test_rmse', rmse_score, sync_dist=True)
+            self.log('test_relative_rmse', r_rmse_score, sync_dist=True)
         self.log('test_loss', loss, sync_dist=True)
         self.log('test_psnr', psnr_score, sync_dist=True)
         self.log('test_ssim', ssim_score, sync_dist=True)

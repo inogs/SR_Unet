@@ -117,26 +117,37 @@ if __name__== "__main__":
     if not loss:
         loss = conf.training.loss
 
-    vars = []
+    # vars = []
     test_file = os.path.basename(test_path)
-    varnames = test_file[:test_file.find("_test_dataset")]
-    vars = varnames.split("_")
+    # varnames = test_file[:test_file.find(".test.dataset")]
+    # vars = varnames.split(".")
+    var = test_file.split(".")[0]
 
     if stat_path is not None:
-        stat = []
-        for var in vars:
-            stat_var = []
-            file_stat_path = os.path.join(stat_path, f"stat_ogs_{var}.txt")
-            with open(file_stat_path, 'r') as file:
-                line_elements = []
-                for line in file:
-                    if line.strip():
-                        line_elements.append(np.float32(line))
-                stat_var.append(line_elements[0])
-                stat_var.append(line_elements[1])
-                stat_var = np.array(stat_var)
-            stat.append(stat_var)
-        stat = np.array(stat)
+        # for var in vars:
+        #     stat_var = []
+        #     file_stat_path = os.path.join(stat_path, f"stat_ogs_{var}.txt")
+        #     with open(file_stat_path, 'r') as file:
+        #         line_elements = []
+        #         for line in file:
+        #             if line.strip():
+        #                 line_elements.append(np.float32(line))
+        #         stat_var.append(line_elements[0])
+        #         stat_var.append(line_elements[1])
+        #         stat_var = np.array(stat_var)
+        #     stat.append(stat_var)
+        # stat = np.array(stat)
+        stat_var = vars[0]
+        with open(stat_path, 'r') as file:
+            line_elements = []
+            for line in file:
+                if line.strip():
+                    line_elements.append(np.float32(line))
+            stat_var.append(line_elements[0])
+            stat_var.append(line_elements[1])
+            stat_var = np.array(stat_var)
+        stat.append(stat_var)
+    stat = np.array(stat)
 
 
     data_module = ICDataModule(

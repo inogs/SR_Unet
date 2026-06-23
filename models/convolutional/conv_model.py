@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import pytorch_lightning as pl
-from models.convolutional.losses import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse
+from models.convolutional.losses_bkp import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse, masked_rmse_relative
 from models.convolutional.networks import UNet3D_MCD
 
 
@@ -49,22 +49,18 @@ class ConvModel(pl.LightningModule):
         optimizer = torch.optim.Adadelta(self.parameters())
         return optimizer
     
-    #### MODIFICA
-    # def enable_dropout(self):
-    #     for m in self.modules(): # itera per i sottomoduli della rete es. e1, e2 etc
-    #         if isinstance(m, nn.Dropout): #controlla se il modulo corrente è un oggetto di tipo nn.Dropout
-    #             m.train() # usa .train() invece che .eval() solo per il dropout -> lo attiva anche se si è nella validation 
+    # MODIFICA PER ATTIVARE IL DROPOUT NELLA VALIDATION:
 
-    def enable_dropout(self):
-        for name, m in self.named_modules(): # itera per i sottomoduli della rete es. e1, e2 etc
-            if isinstance(m, (nn.Dropout, nn.Dropout1d, nn.Dropout2d, nn.Dropout3d)): #controlla se il modulo corrente è un oggetto di tipo nn.Dropout
-                m.train() # usa .train() invece che .eval() solo per il dropout -> lo attiva anche se si è nella validation 
-                # controllo che funzioni
-                print(f"{name}: training={m.training}")
+    # def enable_dropout(self):
+    #     for name, m in self.named_modules(): # itera per i sottomoduli della rete es. e1, e2 etc
+    #         if isinstance(m, (nn.Dropout, nn.Dropout1d, nn.Dropout2d, nn.Dropout3d)): #controlla se il modulo corrente è un oggetto di tipo nn.Dropout
+    #             m.train() # usa .train() invece che .eval() solo per il dropout -> lo attiva anche se si è nella validation 
+    #             # controllo che funzioni
+    #             print(f"{name}: training={m.training}")
 
     # invece che chiamare la funzione dentro validation_step
-    def on_validation_epoch_start(self):
-        self.enable_dropout()
+    # def on_validation_epoch_start(self):
+    #     self.enable_dropout()
 
     #############
 
@@ -144,7 +140,7 @@ class ConvModel(pl.LightningModule):
             x, y = test_batch
 
         mask = (x > 10e3)
-        x[mask] = 0
+        x = torch.where(mask, torch.zeros_like(x), x)
 
         if self.river_net is not None:
             riv_mask = mask[:, 0:1, :, :] #extract mask of shape (bs, 1, h, w)
@@ -157,7 +153,9 @@ class ConvModel(pl.LightningModule):
         ssim_score = masked_ssim(pred, y, mask)
         if self.stats is not None:
             rmse_score = masked_rmse(pred, y, mask, self.stats)
+            r_rmse_score = masked_rmse_relative(pred, y, mask, self.stats)
             self.log('test_rmse', rmse_score, sync_dist=True)
+            self.log('test_relative_rmse', r_rmse_score, sync_dist=True)
         self.log('test_loss', loss, sync_dist=True)
         self.log('test_psnr', psnr_score, sync_dist=True)
         self.log('test_ssim', ssim_score, sync_dist=True)

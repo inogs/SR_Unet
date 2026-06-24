@@ -59,6 +59,18 @@ test_file_path_list = [
 ]
 print_list(test_file_path_list)
 
+target_test_file_path_list = [
+    "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/split/original.variables/Chla.test.txt",
+    "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/split/converted.variables/Chla.log.test.txt",
+    "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/split/original.variables/N3n.test.txt",
+    "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/split/converted.variables/N3n.log.test.txt",
+    "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/split/original.variables/N1p.test.txt",
+    "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/split/converted.variables/N1p.log.test.txt",
+    "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/split/original.variables/S.test.txt",
+    "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/split/original.variables/T.test.txt"
+]
+print_list(target_test_file_path_list)
+
 stat_file_path_list = [
     "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/stat/original.variables/stat.Chla.train.txt",
     "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/stat/converted.variables/stat.Chla.log.train.txt",
@@ -123,6 +135,12 @@ for i in range(len(variable_names)):
         "reference_nc_lists": {
             variable_names_input[i]: test_file_path_list[i]
         },
+        "target_variables": {
+            variable_names_input[i]: variable_names[i]
+        },
+        "reference_target_nc_lists": {
+            variable_names[i]: target_test_file_path_list[i]
+        },
         "stats_files": {
             variable_names_input[i]: stat_file_path_list[i]
         },
@@ -144,4 +162,3 @@ for i in range(len(variable_names)):
         ["python3", "../produce_predictions_prod.py", "-c", json_file_path],
         check=True,
     )
-

@@ -1,0 +1,7 @@
+{
+    "input_path": "/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/postproc/out.months/Chla.test.months",
+    "output_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/postprocessing/montly.analysis/montly.stats",
+    "output_folder_name": "Chla.test.months",
+    "variable": "Chla",
+    "jobs": 16
+}

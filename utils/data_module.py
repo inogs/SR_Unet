@@ -96,7 +96,7 @@ class ICDataset(Dataset):
 
 class ICDataModule(pl.LightningDataModule):
 
-    def __init__(self, train_path:str, test_path:str, val_path:Optional[str]=None, river_train_path:Optional[str]=None, river_test_path:Optional[str]=None, river_val_path:Optional[str]=None, train_batch_size:int=32, val_batch_size:int=32, train_shuffle:bool=False, val_shuffle:bool=False, test_shuffle:bool=False, resize_to_even:bool=False):
+    def __init__(self, train_path:Optional[str]=None, test_path:Optional[str]=None, val_path:Optional[str]=None, river_train_path:Optional[str]=None, river_test_path:Optional[str]=None, river_val_path:Optional[str]=None, train_batch_size:int=32, val_batch_size:int=32, train_shuffle:bool=False, val_shuffle:bool=False, test_shuffle:bool=False, resize_to_even:bool=False):
         super(ICDataModule, self).__init__()
         self.train_path=train_path
         self.test_path=test_path
@@ -114,6 +114,8 @@ class ICDataModule(pl.LightningDataModule):
     def setup(self, stage:str):
         # Assign Train/val split(s) for use in Dataloaders
         if stage == "fit":
+            if self.train_path is None:
+                raise ValueError("train_path must be specified for training")
             #load the dataset
             mem("before loading train dataset")
             _print_mem("before torch.load train")
@@ -146,6 +148,8 @@ class ICDataModule(pl.LightningDataModule):
 
         # Assign Test split(s) for use in Dataloaders
         if stage == "test":
+            if self.test_path is None:
+                raise ValueError("test_path must be specified for test")
             test_ds = torch.load(self.test_path)
             if self.river_test_path != None:
                 rivers_ds = torch.load(self.river_test_path)

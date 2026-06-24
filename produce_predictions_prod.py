@@ -59,6 +59,8 @@ def validate_conf(conf):
         "output_path",
         "variables",
         "reference_nc_lists",
+        "reference_target_nc_lists",
+        "target_variables",
         "stats_files",
     ]
     for key in required:
@@ -74,13 +76,22 @@ def validate_conf(conf):
     for var in conf["variables"]:
         if var not in conf["reference_nc_lists"]:
             raise ValueError(f"Missing reference_nc_lists entry for variable: {var}")
+        if var not in conf["target_variables"]:
+            raise ValueError(f"Missing target_variables entry for variable: {var}")
         if var not in conf["stats_files"]:
             raise ValueError(f"Missing stats_files entry for variable: {var}")
 
+        target_var = conf["target_variables"][var]
+        if target_var not in conf["reference_target_nc_lists"]:
+            raise ValueError(f"Missing reference_target_nc_lists entry for target variable: {target_var}")
+
         check_file(conf["reference_nc_lists"][var], f"reference_nc_lists[{var}]")
+        check_file(conf["reference_target_nc_lists"][target_var], f"reference_target_nc_lists[{target_var}]")
         check_file(conf["stats_files"][var], f"stats_files[{var}]")
         for nc_path in read_file_list(conf["reference_nc_lists"][var]):
             check_file(nc_path, f"reference NetCDF for {var}")
+        for nc_path in read_file_list(conf["reference_target_nc_lists"][target_var]):
+            check_file(nc_path, f"reference target NetCDF for {target_var}")
 
     conf.setdefault("batch_size", 1)
     conf.setdefault("mask_threshold", 1000000.0)
@@ -153,9 +164,10 @@ def load_stats(conf):
 def load_reference_files(conf, n_samples):
     reference_files = {}
     for var in conf["variables"]:
-        files = read_file_list(conf["reference_nc_lists"][var])
+        target_var = conf["target_variables"][var]
+        files = read_file_list(conf["reference_target_nc_lists"][target_var])
         if len(files) != n_samples:
-            raise ValueError(f"Reference files for {var}: {len(files)} != {n_samples} test samples")
+            raise ValueError(f"Reference target files for {target_var}: {len(files)} != {n_samples} test samples")
         reference_files[var] = files
     return reference_files
 
@@ -167,27 +179,60 @@ def prediction_filename(var, reference_file):
     return f"{var}_{filename}".replace("-", "_")
 
 
-def write_prediction(reference_file, output_path, var, prediction):
-    var_output_path = os.path.join(output_path, var)
+def write_prediction(reference_file, output_path, target_var, prediction):
+    var_output_path = os.path.join(output_path, target_var)
     os.makedirs(var_output_path, exist_ok=True)
-    destination_path = os.path.join(var_output_path, prediction_filename(var, reference_file))
+    destination_path = os.path.join(var_output_path, prediction_filename(target_var, reference_file))
 
     prediction = prediction.detach().cpu().numpy()
     with nc.Dataset(reference_file) as source, nc.Dataset(destination_path, "w", format="NETCDF4") as dest:
-        source_var = source.variables[var]
+        source_var = source.variables[target_var]
 
-        for dim_name in source_var.dimensions:
-            source_dim = source.dimensions[dim_name]
-            dest.createDimension(dim_name, None if source_dim.isunlimited() else len(source_dim))
-            if dim_name in source.variables:
-                source_coord = source.variables[dim_name]
-                dest_coord = dest.createVariable(dim_name, source_coord.dtype, source_coord.dimensions)
-                dest_coord[:] = source_coord[:]
+        for attr_name in source.ncattrs():
+            dest.setncattr(attr_name, source.getncattr(attr_name))
 
-        fill_value = getattr(source_var, "_FillValue", None)
-        kwargs = {"fill_value": fill_value} if fill_value is not None else {}
-        dest_var = dest.createVariable(var, source_var.dtype, source_var.dimensions, **kwargs)
-        dest_var[:] = ma.masked_array(prediction, mask=ma.getmaskarray(source_var[:]))
+        for dim_name, dimension in source.dimensions.items():
+            dest.createDimension(
+                dim_name,
+                len(dimension) if not dimension.isunlimited() else None,
+            )
+
+        for var_name, src_var in source.variables.items():
+            if "_FillValue" in src_var.ncattrs():
+                dest_var = dest.createVariable(
+                    var_name,
+                    src_var.datatype,
+                    src_var.dimensions,
+                    fill_value=src_var.getncattr("_FillValue"),
+                )
+            else:
+                dest_var = dest.createVariable(
+                    var_name,
+                    src_var.datatype,
+                    src_var.dimensions,
+                )
+
+            for attr_name in src_var.ncattrs():
+                if attr_name != "_FillValue":
+                    dest_var.setncattr(attr_name, src_var.getncattr(attr_name))
+
+            if var_name == target_var:
+                masked_prediction = ma.masked_array(prediction, mask=ma.getmaskarray(source_var[:]))
+                dest_var[:] = masked_prediction
+                if masked_prediction.count() > 0:
+                    data_min = float(ma.min(masked_prediction))
+                    data_max = float(ma.max(masked_prediction))
+                    if "valid_min" in dest_var.ncattrs():
+                        dest_var.setncattr("valid_min", data_min)
+                    if "valid_max" in dest_var.ncattrs():
+                        dest_var.setncattr("valid_max", data_max)
+                    if "actual_range" in dest_var.ncattrs():
+                        dest_var.setncattr(
+                            "actual_range",
+                            np.array([data_min, data_max], dtype=np.float32),
+                        )
+            else:
+                dest_var[:] = src_var[:]
 
     print(destination_path)
 
@@ -225,11 +270,12 @@ def predict(conf):
             for sample_offset, sample_index in enumerate(range(start, stop)):
                 for var_index, var in enumerate(conf["variables"]):
                     mean, std = stats[var]
+                    target_var = conf["target_variables"][var]
                     pred_var = prediction[sample_offset, var_index] * std + mean
                     write_prediction(
                         reference_files[var][sample_index],
                         output_path,
-                        var,
+                        target_var,
                         pred_var,
                     )
 

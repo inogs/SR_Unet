@@ -7,6 +7,12 @@
     "reference_nc_lists": {
         "chl": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/input/split/original.variables/chl.test.txt"
     },
+    "target_variables": {
+        "chl": "Chla"
+    },
+    "reference_target_nc_lists": {
+        "Chla": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/split/original.variables/Chla.test.txt"
+    },
     "stats_files": {
         "chl": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/stat/original.variables/stat.Chla.train.txt"
     },

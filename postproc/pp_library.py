@@ -6,6 +6,8 @@ MONTHS = [
     "jul", "aug", "sep", "oct", "nov", "dec",
 ]
 
+SEASONS = ["winter", "spring", "summer", "autumn"]
+
 MONTH_IDS = {
     "jan": "01",
     "feb": "02",
@@ -23,6 +25,9 @@ MONTH_IDS = {
 
 def make_month_file_dict():
     return {month: [] for month in MONTHS}
+
+def make_season_file_dict():
+    return {season: [] for season in SEASONS}
 
 def extract_year_and_period_id(s):
     file_name = os.path.basename(s)

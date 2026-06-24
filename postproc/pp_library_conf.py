@@ -11,5 +11,9 @@ def read_split_months_conf(path):
     return read_json_conf(path)
 
 
+def read_split_seasons_conf(path):
+    return read_json_conf(path)
+
+
 def read_compute_monthly_stats_conf(path):
     return read_json_conf(path)

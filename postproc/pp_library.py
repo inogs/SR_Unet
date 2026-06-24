@@ -72,3 +72,12 @@ def determine_month(period_id):
         return "dec"
     else:
         return None
+
+def read_file_list(path):
+    files = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                files.append(line)
+    return files

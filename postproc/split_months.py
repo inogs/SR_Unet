@@ -16,20 +16,18 @@ from pp_library import (
     determine_month,
     MONTH_IDS,
     make_month_file_dict,
+    read_file_list
 )
 
 path_output = os.path.join(os.path.dirname(__file__), "out.months")
-path_input = os.path.join(os.path.dirname(__file__), "Chla.test.txt")
+path_input = "/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/postproc/input.folder/Chla.test.txt"
 print(path_output)
 print(path_input)
 
-list_input_files = []
+
+list_input_files = read_file_list(path_input)
 dist_output_month_files = make_month_file_dict()
 
-# read from input
-with open(path_input, "r") as f:
-    for line in f:
-        list_input_files.append(line.strip())
 
 for file_name in list_input_files:
     year, period_id = extract_year_and_period_id(file_name)

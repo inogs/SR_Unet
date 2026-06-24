@@ -1,0 +1,5 @@
+{
+    "input_path": "/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/postproc/input.folder/Chla.test.txt",
+    "output_path": "/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/postproc/out.months",
+    "output_folder_name": "Chla.test.months"
+}

@@ -55,7 +55,7 @@ def combine_equal_mask(mus, vars_):
     vars_ = np.asarray(vars_, dtype=np.float64)
 
     mu_tot = mus.mean()
-    sigma = np.sqrt(np.mean(vars_ + (mus - mu_tot)**2))
+    sigma = np.mean(np.sqrt(vars_))
 
     return mu_tot, sigma
 

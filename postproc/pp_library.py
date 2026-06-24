@@ -8,6 +8,13 @@ MONTHS = [
 
 SEASONS = ["winter", "spring", "summer", "autumn"]
 
+SEASON_IDS = {
+    "winter": "01",
+    "spring": "02",
+    "summer": "03",
+    "autumn": "04",
+}
+
 MONTH_IDS = {
     "jan": "01",
     "feb": "02",

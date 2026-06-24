@@ -17,3 +17,7 @@ def read_split_seasons_conf(path):
 
 def read_compute_monthly_stats_conf(path):
     return read_json_conf(path)
+
+
+def read_compute_season_field_stats_conf(path):
+    return read_json_conf(path)

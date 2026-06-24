@@ -1,0 +1,7 @@
+{
+    "input_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/postprocessing/montly.analysis/season.file.lists/N1p.test.seasons",
+    "output_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/postprocessing/montly.analysis/season.stat.fields",
+    "output_folder_name": "N1p.test.seasons",
+    "variable": "N1p",
+    "jobs": 16
+}

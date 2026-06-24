@@ -1,0 +1,34 @@
+import os
+
+from pp_library import SEASON_IDS
+from pp_library_conf import read_compute_season_field_stats_conf
+from pp_library_nc import compute_list_field_stats, write_field
+
+
+conf_path = os.path.join(os.path.dirname(__file__), "conf_compute_season_stat_field.json")
+conf = read_compute_season_field_stats_conf(conf_path)
+
+path_input = conf.input_path
+path_output = conf.output_path
+output_folder_name = conf.output_folder_name
+variable = conf.variable
+jobs = conf.jobs
+
+list_input_files = os.listdir(path_input)
+for season in SEASON_IDS:
+    expected_file_name = f"{season}.txt"
+    if expected_file_name not in list_input_files:
+        raise FileNotFoundError(f"Expected file {expected_file_name} for season {season} not found in {path_input}")
+
+output_folder_path = os.path.join(path_output, output_folder_name)
+os.makedirs(output_folder_path, exist_ok=True)
+
+for season, season_id in SEASON_IDS.items():
+    season_file_path = os.path.join(path_input, f"{season}.txt")
+    mean_field, std_field, reference_file = compute_list_field_stats(season_file_path, variable, jobs)
+
+    mean_path = os.path.join(output_folder_path, f"{season_id}.{season}.mean.nc")
+    std_path = os.path.join(output_folder_path, f"{season_id}.{season}.std.nc")
+
+    write_field(reference_file, mean_path, variable, mean_field)
+    write_field(reference_file, std_path, variable, std_field)

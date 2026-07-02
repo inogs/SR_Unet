@@ -1,0 +1,6 @@
+{
+    "folder_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/predictions/chl.Chla/Chla",
+    "output_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/predictions/original.variables.postproc/treshold/chl.Chla",
+    "variable_name": "Chla",
+    "treshold": 0.00001
+}

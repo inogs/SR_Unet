@@ -2,14 +2,13 @@ import json
 import subprocess
 import os
 
-interp_flag = True
-conversion_flag = True
+
 
 path_target_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup"
 path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC"
 path_preproc_dir = "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME_DEVELOP"
 conversion_type = "log"
-number_of_processes = 1
+number_of_processes = 4
 
 path_interpolation_out_dir = os.path.join(path_preproc_dir, "data.input", "interpolated")
 path_interpolation_input_dir = os.path.join(path_preproc_dir, "data.input", "original")
@@ -23,6 +22,12 @@ list_variables = {
     "po4":"N1p",
     "so":"S",
     "thetao":"T"
+}
+
+list_conversion_variables = {
+    "chl":"Chla",
+    "no3":"N3n",
+    "po4":"N1p"
 }
 
 
@@ -65,6 +70,23 @@ def find_grid_file(target_folder, var_target):
     return os.path.join(target_folder, files[0])
 
 
+def execute_command(cmd, log_file_path):
+    print(f"    Running command: {' '.join(cmd)}")
+    try:
+        with open(log_file_path, "w") as log_file:
+            subprocess.run(
+                cmd,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                check=True,
+            )
+        print(f"    Command completed successfully.")
+    except subprocess.CalledProcessError as exc:
+        print(
+            f"Warning: command failed with return code {exc.returncode}. "
+            f"See log file: {log_file_path}"
+        )
+
 def run_interpolation_layer():
     print("[Starting interpolation of variables]")
 
@@ -80,17 +102,14 @@ def run_interpolation_layer():
         print(f"Processing variable: {var_input} -> {var_target}")
 
         input_folder = os.path.join(path_interpolation_input_dir, var_input)
-        print(f"    input_folder    : {input_folder}")
         target_folder = os.path.join(path_interpolation_grid_ref_dir, var_target)
-        print(f"    grid_ref_folder : {target_folder}")
         output_folder = os.path.join(path_interpolation_out_dir, var_input)
-        print(f"    output_folder   : {output_folder}")
         os.makedirs(output_folder, exist_ok=True)
 
         grid_file_path = find_grid_file(target_folder, var_target)
         if grid_file_path is None:
+            print(f"Warning: grid file for variable {var_target} not found. Skipping interpolation for variable: {var_input}")
             continue
-        print(f"    grid_file_path: {grid_file_path}")
 
         conf_interpolation = {
             "input_path": input_folder,
@@ -120,22 +139,86 @@ def run_interpolation_layer():
             "interpolate_bilinear.py",
             "--config", conf_interpolation_path
         ]
-        # with open(log_file_path, "w") as log_file:
-        #     subprocess.run(cmd, stdout=log_file, stderr=subprocess.STDOUT, check=True)
+        execute_command(cmd, log_file_path)
 
     print("[Interpolation of variables completed]")
-
+# end run_interpolation_layer
 
 def run_conversion_layer():
     print("[Starting conversion of variables]")
 
-    # Implement the logic for the conversion layer here
-    # This is a placeholder for the actual conversion logic
-    # You can use similar structure as in run_interpolation_layer()
+    list_valid_variable_pairs = get_valid_variable_pairs(
+        path_interpolation_input_dir,
+        path_interpolation_grid_ref_dir,
+        list_conversion_variables
+    )
+
+    print_variable_pairs(list_valid_variable_pairs)
+
+    for var_input, var_target in list_valid_variable_pairs.items():
+        print(f"Processing variable: {var_input} -> {var_target}")
+
+        # var input
+        conf_conversion = {
+            "folder_path": os.path.join(path_preproc_dir, "data.input", "interpolated", var_input),
+            "output_path": os.path.join(path_preproc_dir, "data.input", "converted", var_input + "." + conversion_type),
+            "conversion_type": conversion_type,
+            "variable_name": var_input
+        }
+
+        conf_conversion_path = os.path.join(path_conf_dir, f"conf.conversion.{var_input}.json")
+        with open(conf_conversion_path, "w") as f:
+            json.dump(conf_conversion, f, indent=4)
+        print(f"    Configuration file for conversion created for variable: {var_input}")
+        print(f"    conf_file_path: {conf_conversion_path}")
+
+        cmd = [
+            "mpirun",
+            "-np", str(number_of_processes),
+            "python",
+            "converter_mpi.py",
+            "--config", conf_conversion_path
+        ]
+
+        log_file_path = os.path.join(path_log_dir, f"conversion_{var_input}.log")
+        print(f"    log_file_path: {log_file_path}")
+        execute_command(cmd, log_file_path)
+
+
+        # var target
+        conf_conversion = {
+            "folder_path": os.path.join(path_preproc_dir, "data.target", "original", var_target),
+            "output_path": os.path.join(path_preproc_dir, "data.target", "converted", var_target + "." + conversion_type),
+            "conversion_type": conversion_type,
+            "variable_name": var_target
+        }
+
+        conf_conversion_path = os.path.join(path_conf_dir, f"conf.conversion.{var_target}.json")
+        with open(conf_conversion_path, "w") as f:
+            json.dump(conf_conversion, f, indent=4)
+        print(f"    Configuration file for conversion created for variable: {var_target}")
+        print(f"    conf_file_path: {conf_conversion_path}")
+
+        cmd = [
+            "mpirun",
+            "-np", str(number_of_processes),
+            "python",
+            "converter_mpi.py",
+            "--config", conf_conversion_path
+        ]
+
+        log_file_path = os.path.join(path_log_dir, f"conversion_{var_target}.log")
+        print(f"    log_file_path: {log_file_path}")
+        execute_command(cmd, log_file_path)
+
 
     print("[Conversion of variables completed]")
+# end run_conversion_layer
 
 if __name__ == "__main__":
+
+    interp_flag = True
+    conversion_flag = True
 
     if interp_flag:
         run_interpolation_layer()

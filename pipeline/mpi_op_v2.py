@@ -1,35 +1,18 @@
-import json
-import subprocess
 import os
+import argparse
+import json
+
+from typing import Dict
+from types import SimpleNamespace
+
+import subprocess
 
 
-
-path_target_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup"
-path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC"
-path_preproc_dir = "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME_DEVELOP"
-conversion_type = "log"
-number_of_processes = 16
-
-path_interpolation_out_dir = os.path.join(path_preproc_dir, "data.input", "interpolated")
-path_interpolation_input_dir = os.path.join(path_preproc_dir, "data.input", "original")
-path_interpolation_grid_ref_dir = os.path.join(path_preproc_dir, "data.target", "original")
-path_log_dir = os.path.join(path_preproc_dir, "log")
-path_conf_dir = os.path.join(path_preproc_dir, "conf.files")
-
-list_variables = {
-    "chl":"Chla",
-    "no3":"N3n",
-    "po4":"N1p",
-    "so":"S",
-    "thetao":"T"
-}
-
-list_conversion_variables = {
-    "chl":"Chla",
-    "no3":"N3n",
-    "po4":"N1p"
-}
-
+path_conf_file = os.path.join(
+    os.path.dirname(__file__),
+    "conf.files.dir",
+    "conf_general.json"
+)
 
 def get_valid_variable_pairs(input_dir, target_dir, variables):
     list_valid_variable_pairs = {}
@@ -49,7 +32,7 @@ def get_valid_variable_pairs(input_dir, target_dir, variables):
 
 
 def print_variable_pairs(variable_pairs):
-    print("List of variables to be interpolated:")
+    print("List of valid variable pairs:")
     for var_input, var_target in variable_pairs.items():
         print(f"    {var_input} -> {var_target}")
 
@@ -87,8 +70,15 @@ def execute_command(cmd, log_file_path, label):
             f"Continuing. See log file: {log_file_path}"
         )
 
-def run_interpolation_layer():
+def run_interpolation_layer(conf):
     print("[Starting interpolation of variables]")
+
+    path_interpolation_out_dir = os.path.join(conf.path_preproc_dir, "data.input", "interpolated")
+    path_interpolation_input_dir = os.path.join(conf.path_preproc_dir, "data.input", "original")
+    path_interpolation_grid_ref_dir = os.path.join(conf.path_preproc_dir, "data.target", "original")
+    path_log_dir = os.path.join(conf.path_preproc_dir, "log")
+    path_conf_dir = os.path.join(conf.path_preproc_dir, "conf.files")
+    list_variables = vars(conf.variables)
 
     list_valid_variable_pairs = get_valid_variable_pairs(
         path_interpolation_input_dir,
@@ -134,7 +124,7 @@ def run_interpolation_layer():
 
         cmd = [
             "mpirun",
-            "-np", str(number_of_processes),
+            "-np", str(conf.number_of_processes),
             "python",
             "interpolate_bilinear.py",
             "--config", conf_interpolation_path
@@ -144,11 +134,17 @@ def run_interpolation_layer():
     print("[Interpolation of variables completed]")
 # end run_interpolation_layer
 
-def run_conversion_layer():
+def run_conversion_layer(conf):
     print("[Starting conversion of variables]")
 
+    path_interpolation_out_dir = os.path.join(conf.path_preproc_dir, "data.input", "interpolated")
+    path_interpolation_grid_ref_dir = os.path.join(conf.path_preproc_dir, "data.target", "original")
+    path_log_dir = os.path.join(conf.path_preproc_dir, "log")
+    path_conf_dir = os.path.join(conf.path_preproc_dir, "conf.files")
+    list_conversion_variables = vars(conf.conversion_variables)
+
     list_valid_variable_pairs = get_valid_variable_pairs(
-        path_interpolation_input_dir,
+        path_interpolation_out_dir,
         path_interpolation_grid_ref_dir,
         list_conversion_variables
     )
@@ -160,9 +156,9 @@ def run_conversion_layer():
 
         # var input
         conf_conversion = {
-            "folder_path": os.path.join(path_preproc_dir, "data.input", "interpolated", var_input),
-            "output_path": os.path.join(path_preproc_dir, "data.input", "converted", var_input + "." + conversion_type),
-            "conversion_type": conversion_type,
+            "folder_path": os.path.join(conf.path_preproc_dir, "data.input", "interpolated", var_input),
+            "output_path": os.path.join(conf.path_preproc_dir, "data.input", "converted", var_input + "." + conf.conversion_type),
+            "conversion_type": conf.conversion_type,
             "variable_name": var_input
         }
 
@@ -174,7 +170,7 @@ def run_conversion_layer():
 
         cmd = [
             "mpirun",
-            "-np", str(number_of_processes),
+            "-np", str(conf.number_of_processes),
             "python",
             "converter_mpi.py",
             "--config", conf_conversion_path
@@ -187,9 +183,9 @@ def run_conversion_layer():
 
         # var target
         conf_conversion = {
-            "folder_path": os.path.join(path_preproc_dir, "data.target", "original", var_target),
-            "output_path": os.path.join(path_preproc_dir, "data.target", "converted", var_target + "." + conversion_type),
-            "conversion_type": conversion_type,
+            "folder_path": os.path.join(conf.path_preproc_dir, "data.target", "original", var_target),
+            "output_path": os.path.join(conf.path_preproc_dir, "data.target", "converted", var_target + "." + conf.conversion_type),
+            "conversion_type": conf.conversion_type,
             "variable_name": var_target
         }
 
@@ -201,7 +197,7 @@ def run_conversion_layer():
 
         cmd = [
             "mpirun",
-            "-np", str(number_of_processes),
+            "-np", str(conf.number_of_processes),
             "python",
             "converter_mpi.py",
             "--config", conf_conversion_path
@@ -215,13 +211,26 @@ def run_conversion_layer():
     print("[Conversion of variables completed]")
 # end run_conversion_layer
 
+def read_conf_file(conf_path):
+    with open(conf_path, "r") as f:
+        return json.load(f, object_hook=lambda data: SimpleNamespace(**data))
+
 if __name__ == "__main__":
 
-    interp_flag = True
-    conversion_flag = True
+    conf = read_conf_file(path_conf_file)
 
-    if interp_flag:
-        run_interpolation_layer()
+    print(f"path_target_dir: {conf.path_target_dir}")
+    print(f"path_input_dir: {conf.path_input_dir}")
+    print(f"path_preproc_dir: {conf.path_preproc_dir}")
+    print(f"conversion_type: {conf.conversion_type}")
+    print(f"number_of_processes: {conf.number_of_processes}")
+    print(f"interp_flag: {conf.interp_flag}")
+    print(f"conversion_flag: {conf.conversion_flag}")
+    print(f"variables: {conf.variables}")
+    print(f"conversion_variables: {conf.conversion_variables}")
 
-    if conversion_flag:
-        run_conversion_layer()
+    if conf.interp_flag == True:
+        run_interpolation_layer(conf)
+
+    if conf.conversion_flag == True:
+        run_conversion_layer(conf)

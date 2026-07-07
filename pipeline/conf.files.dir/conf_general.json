@@ -1,0 +1,21 @@
+{
+    "path_target_dir": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup",
+    "path_input_dir": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC",
+    "path_preproc_dir": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME_DEVELOP",
+    "conversion_type": "log",
+    "number_of_processes": 4,
+    "interp_flag": false,
+    "conversion_flag": true,
+    "variables": {
+        "chl": "Chla",
+        "no3": "N3n",
+        "po4": "N1p",
+        "so": "S",
+        "thetao": "T"
+    },
+    "conversion_variables": {
+        "chl": "Chla",
+        "no3": "N3n",
+        "po4": "N1p"
+    }
+}

@@ -8,7 +8,7 @@ path_target_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cl
 path_input_dir = "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC"
 path_preproc_dir = "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME_DEVELOP"
 conversion_type = "log"
-number_of_processes = 4
+number_of_processes = 16
 
 path_interpolation_out_dir = os.path.join(path_preproc_dir, "data.input", "interpolated")
 path_interpolation_input_dir = os.path.join(path_preproc_dir, "data.input", "original")

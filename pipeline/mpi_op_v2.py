@@ -55,10 +55,10 @@ def print_variable_pairs(variable_pairs):
 
 
 def find_grid_file(target_folder, var_target):
-    files = [
+    files = sorted(
         f for f in os.listdir(target_folder)
         if f.startswith(var_target) and f.endswith(".nc")
-    ]
+    )
 
     if len(files) == 0:
         print(
@@ -70,7 +70,7 @@ def find_grid_file(target_folder, var_target):
     return os.path.join(target_folder, files[0])
 
 
-def execute_command(cmd, log_file_path):
+def execute_command(cmd, log_file_path, label):
     print(f"    Running command: {' '.join(cmd)}")
     try:
         with open(log_file_path, "w") as log_file:
@@ -80,11 +80,11 @@ def execute_command(cmd, log_file_path):
                 stderr=subprocess.STDOUT,
                 check=True,
             )
-        print(f"    Command completed successfully.")
+        print(f"    {label} completed successfully.")
     except subprocess.CalledProcessError as exc:
         print(
-            f"Warning: command failed with return code {exc.returncode}. "
-            f"See log file: {log_file_path}"
+            f"Warning: {label} failed with return code {exc.returncode}. "
+            f"Continuing. See log file: {log_file_path}"
         )
 
 def run_interpolation_layer():
@@ -139,7 +139,7 @@ def run_interpolation_layer():
             "interpolate_bilinear.py",
             "--config", conf_interpolation_path
         ]
-        execute_command(cmd, log_file_path)
+        execute_command(cmd, log_file_path, f"Interpolation for variable {var_input}")
 
     print("[Interpolation of variables completed]")
 # end run_interpolation_layer
@@ -182,7 +182,7 @@ def run_conversion_layer():
 
         log_file_path = os.path.join(path_log_dir, f"conversion_{var_input}.log")
         print(f"    log_file_path: {log_file_path}")
-        execute_command(cmd, log_file_path)
+        execute_command(cmd, log_file_path, f"Conversion for input variable {var_input}")
 
 
         # var target
@@ -209,7 +209,7 @@ def run_conversion_layer():
 
         log_file_path = os.path.join(path_log_dir, f"conversion_{var_target}.log")
         print(f"    log_file_path: {log_file_path}")
-        execute_command(cmd, log_file_path)
+        execute_command(cmd, log_file_path, f"Conversion for target variable {var_target}")
 
 
     print("[Conversion of variables completed]")

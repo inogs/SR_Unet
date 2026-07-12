@@ -134,6 +134,16 @@ target_entries = [
         "threshold_key": "N3n",
         "source_list": os.path.join(path_opa_home, "target", "split", "original.variables", "N3n.test.txt"),
     },
+    {
+        "name": "S",
+        "variable_name": "S",
+        "source_list": os.path.join(path_opa_home, "target", "split", "original.variables", "S.test.txt"),
+    },
+    {
+        "name": "T",
+        "variable_name": "T",
+        "source_list": os.path.join(path_opa_home, "target", "split", "original.variables", "T.test.txt"),
+    },
 ]
 
 input_entries = [
@@ -155,6 +165,16 @@ input_entries = [
         "threshold_key": "N3n",
         "source_list": os.path.join(path_opa_home, "input", "split", "original.variables", "no3.test.txt"),
     },
+    {
+        "name": "so",
+        "variable_name": "so",
+        "source_list": os.path.join(path_opa_home, "input", "split", "original.variables", "so.test.txt"),
+    },
+    {
+        "name": "thetao",
+        "variable_name": "thetao",
+        "source_list": os.path.join(path_opa_home, "input", "split", "original.variables", "thetao.test.txt"),
+    },
 ]
 
 normal_net_entries = [
@@ -175,6 +195,16 @@ normal_net_entries = [
         "variable_name": "N3n",
         "threshold_key": "N3n",
         "source_folder": os.path.join(path_predictions, "no3.N3n", "N3n"),
+    },
+    {
+        "name": "so.S",
+        "variable_name": "S",
+        "source_folder": os.path.join(path_predictions, "so.S", "S"),
+    },
+    {
+        "name": "thetao.T",
+        "variable_name": "T",
+        "source_folder": os.path.join(path_predictions, "thetao.T", "T"),
     },
 ]
 
@@ -401,6 +431,9 @@ def process_domain(domain_name, entries, source_kind, already_log=False):
             os.path.join(file_lists_root, "original", f"{name}.txt"),
         )
 
+        if "threshold_key" not in entry:
+            continue
+
         treshold_value = thresholds[entry["threshold_key"]]
         if already_log:
             treshold_value = math.log(treshold_value)
@@ -455,4 +488,4 @@ if __name__ == "__main__":
 
     Path(path_postprocessing).mkdir(parents=True, exist_ok=True)
     # make_predictions()
-    # process_predictions_v3()
+    process_predictions_v3()

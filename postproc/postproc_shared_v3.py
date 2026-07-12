@@ -21,28 +21,32 @@ conf_compute_season_stat_field_path = postproc_dir / "conf_compute_season_stat_f
 
 domains = {
     "input": {
-        "chl": "chl",
-        "po4": "po4",
-        "no3": "no3",
+        "chl": {"variable": "chl", "levels": ["original", "treshold", "treshold.log"]},
+        "po4": {"variable": "po4", "levels": ["original", "treshold", "treshold.log"]},
+        "no3": {"variable": "no3", "levels": ["original", "treshold", "treshold.log"]},
+        "so": {"variable": "so", "levels": ["original"]},
+        "thetao": {"variable": "thetao", "levels": ["original"]},
     },
     "target": {
-        "Chla": "Chla",
-        "N1p": "N1p",
-        "N3n": "N3n",
+        "Chla": {"variable": "Chla", "levels": ["original", "treshold", "treshold.log"]},
+        "N1p": {"variable": "N1p", "levels": ["original", "treshold", "treshold.log"]},
+        "N3n": {"variable": "N3n", "levels": ["original", "treshold", "treshold.log"]},
+        "S": {"variable": "S", "levels": ["original"]},
+        "T": {"variable": "T", "levels": ["original"]},
     },
     "normal.net": {
-        "chl.Chla": "Chla",
-        "po4.N1p": "N1p",
-        "no3.N3n": "N3n",
+        "chl.Chla": {"variable": "Chla", "levels": ["original", "treshold", "treshold.log"]},
+        "po4.N1p": {"variable": "N1p", "levels": ["original", "treshold", "treshold.log"]},
+        "no3.N3n": {"variable": "N3n", "levels": ["original", "treshold", "treshold.log"]},
+        "so.S": {"variable": "S", "levels": ["original"]},
+        "thetao.T": {"variable": "T", "levels": ["original"]},
     },
     "log.net": {
-        "chl.log.Chla.log": "Chla",
-        "po4.log.N1p.log": "N1p",
-        "no3.log.N3n.log": "N3n",
+        "chl.log.Chla.log": {"variable": "Chla", "levels": ["original", "treshold", "treshold.log"]},
+        "po4.log.N1p.log": {"variable": "N1p", "levels": ["original", "treshold", "treshold.log"]},
+        "no3.log.N3n.log": {"variable": "N3n", "levels": ["original", "treshold", "treshold.log"]},
     },
 }
-
-levels = ["original", "treshold", "treshold.log"]
 
 
 def write_json(path, data):
@@ -55,31 +59,44 @@ def run_script(script_path):
     subprocess.run(["python", str(script_path)], check=True, cwd=str(postproc_dir))
 
 
+def folder_has_files(path):
+    return path.is_dir() and any(item.is_file() for item in path.rglob("*"))
+
+
 def ensure_layout():
     for root_name in ["montly", "seasonal"]:
         Path(path_postprocessing, root_name).mkdir(parents=True, exist_ok=True)
 
     for section_name in ["montly.file.lists", "montly.stats"]:
-        for domain_name in domains:
-            for level_name in levels:
-                Path(
-                    path_postprocessing,
-                    "montly",
-                    section_name,
-                    domain_name,
-                    level_name,
-                ).mkdir(parents=True, exist_ok=True)
+        for domain_name, entries in domains.items():
+            for entry in entries.values():
+                for level_name in entry["levels"]:
+                    Path(
+                        path_postprocessing,
+                        "montly",
+                        section_name,
+                        domain_name,
+                        level_name,
+                    ).mkdir(parents=True, exist_ok=True)
 
     for section_name in ["seasonal.file.lists", "seasonal.stat.fields"]:
-        for domain_name in domains:
-            for level_name in levels:
-                Path(
-                    path_postprocessing,
-                    "seasonal",
-                    section_name,
-                    domain_name,
-                    level_name,
-                ).mkdir(parents=True, exist_ok=True)
+        for domain_name, entries in domains.items():
+            for entry in entries.values():
+                for level_name in entry["levels"]:
+                    Path(
+                        path_postprocessing,
+                        "seasonal",
+                        section_name,
+                        domain_name,
+                        level_name,
+                    ).mkdir(parents=True, exist_ok=True)
+
+
+def iter_domain_entries():
+    for domain_name, entries in domains.items():
+        for entry_name, entry in entries.items():
+            for level_name in entry["levels"]:
+                yield domain_name, level_name, entry_name, entry["variable"]
 
 
 def get_prediction_file_list(domain_name, level_name, entry_name):
@@ -139,17 +156,27 @@ def compute_monthly_stats(domain_name, level_name, entry_name, variable_name, sp
 
 
 def process_monthly_stats():
-    for domain_name, entries in domains.items():
-        for level_name in levels:
-            for entry_name, variable_name in entries.items():
-                split_path = split_months(domain_name, level_name, entry_name)
-                compute_monthly_stats(
-                    domain_name=domain_name,
-                    level_name=level_name,
-                    entry_name=entry_name,
-                    variable_name=variable_name,
-                    split_path=split_path,
-                )
+    for domain_name, level_name, entry_name, variable_name in iter_domain_entries():
+        stats_path = Path(
+            path_postprocessing,
+            "montly",
+            "montly.stats",
+            domain_name,
+            level_name,
+            entry_name,
+        )
+        if folder_has_files(stats_path):
+            print(f"Monthly stats already present, skipping: {stats_path}")
+            continue
+
+        split_path = split_months(domain_name, level_name, entry_name)
+        compute_monthly_stats(
+            domain_name=domain_name,
+            level_name=level_name,
+            entry_name=entry_name,
+            variable_name=variable_name,
+            split_path=split_path,
+        )
 
 
 def split_seasons(domain_name, level_name, entry_name):
@@ -198,17 +225,27 @@ def compute_season_stat_fields(
 
 
 def process_seasonal_stat_fields():
-    for domain_name, entries in domains.items():
-        for level_name in levels:
-            for entry_name, variable_name in entries.items():
-                split_path = split_seasons(domain_name, level_name, entry_name)
-                compute_season_stat_fields(
-                    domain_name=domain_name,
-                    level_name=level_name,
-                    entry_name=entry_name,
-                    variable_name=variable_name,
-                    split_path=split_path,
-                )
+    for domain_name, level_name, entry_name, variable_name in iter_domain_entries():
+        stat_field_path = Path(
+            path_postprocessing,
+            "seasonal",
+            "seasonal.stat.fields",
+            domain_name,
+            level_name,
+            entry_name,
+        )
+        if folder_has_files(stat_field_path):
+            print(f"Seasonal stat fields already present, skipping: {stat_field_path}")
+            continue
+
+        split_path = split_seasons(domain_name, level_name, entry_name)
+        compute_season_stat_fields(
+            domain_name=domain_name,
+            level_name=level_name,
+            entry_name=entry_name,
+            variable_name=variable_name,
+            split_path=split_path,
+        )
 
 
 if __name__ == "__main__":
@@ -217,4 +254,4 @@ if __name__ == "__main__":
 
     ensure_layout()
     process_monthly_stats()
-    # process_seasonal_stat_fields()
+    process_seasonal_stat_fields()

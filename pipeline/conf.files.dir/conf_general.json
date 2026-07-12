@@ -1,4 +1,24 @@
 {
+    "pipeline_orchestrator": {
+        "steps": [
+            {
+                "name": "create_structure",
+                "enabled": true,
+                "script": "create_structure_v3.py",
+                "config": "conf.files.dir/conf_create_structure_v3.json"
+            },
+            {
+                "name": "mpi_op_v2",
+                "enabled": true,
+                "script": "mpi_op_v2.py"
+            },
+            {
+                "name": "multithread_op",
+                "enabled": true,
+                "script": "multithread_op.py"
+            }
+        ]
+    },
     "path_target_dir": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup",
     "path_input_dir": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC",
     "path_preproc_dir": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME_DEVELOP",
@@ -24,25 +44,5 @@
         "validation_size": 0.1,
         "seed": 42
     },
-    "number_of_threads": 4,
-    "pipeline_orchestrator": {
-        "steps": [
-            {
-                "name": "create_structure",
-                "enabled": true,
-                "script": "create_structure_v3.py",
-                "config": "conf.files.dir/conf_create_structure_v3.json"
-            },
-            {
-                "name": "mpi_op_v2",
-                "enabled": true,
-                "script": "mpi_op_v2.py"
-            },
-            {
-                "name": "multithread_op",
-                "enabled": true,
-                "script": "multithread_op.py"
-            }
-        ]
-    }
+    "number_of_threads": 4
 }

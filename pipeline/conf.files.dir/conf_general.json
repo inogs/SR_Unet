@@ -26,7 +26,8 @@
     "number_of_processes": 48,
     "interp_flag": false,
     "conversion_flag": false,
-    "treshold_flag": true,
+    "treshold_flag": false,
+    "treshold_conversion_flag": true,
     "variables": {
         "chl": "Chla",
         "no3": "N3n",

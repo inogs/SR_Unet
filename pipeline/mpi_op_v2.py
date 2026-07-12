@@ -323,6 +323,83 @@ def run_treshold_layer(conf):
     print("[Treshold application on variables completed]")
 # end run_treshold_layer
 
+def run_treshold_conversion_layer(conf):
+    print("[Starting conversion of tresholded variables]")
+
+    path_input_treshold_dir = os.path.join(conf.path_preproc_dir, "data.input", "treshold")
+    path_target_treshold_dir = os.path.join(conf.path_preproc_dir, "data.target", "treshold")
+    path_log_dir = os.path.join(conf.path_preproc_dir, "log")
+    path_conf_dir = os.path.join(conf.path_preproc_dir, "conf.files")
+    list_treshold_variables = vars(conf.treshold_variables)
+
+    list_valid_variable_pairs = get_valid_variable_pairs(
+        path_input_treshold_dir,
+        path_target_treshold_dir,
+        list_treshold_variables
+    )
+
+    print_variable_pairs(list_valid_variable_pairs)
+
+    for var_input, var_target in list_valid_variable_pairs.items():
+        print(f"Processing variable: {var_input} -> {var_target}")
+
+        # var input
+        conf_conversion = {
+            "folder_path": os.path.join(path_input_treshold_dir, var_input),
+            "output_path": os.path.join(conf.path_preproc_dir, "data.input", "treshold.converted", var_input + "." + conf.conversion_type),
+            "conversion_type": conf.conversion_type,
+            "variable_name": var_input
+        }
+
+        conf_conversion_path = os.path.join(path_conf_dir, f"conf.treshold.conversion.{var_input}.json")
+        with open(conf_conversion_path, "w") as f:
+            json.dump(conf_conversion, f, indent=4)
+        print(f"    Configuration file for conversion created for variable: {var_input}")
+        print(f"    conf_file_path: {conf_conversion_path}")
+
+        cmd = [
+            "mpirun",
+            "-np", str(conf.number_of_processes),
+            "python",
+            "converter_mpi.py",
+            "--config", conf_conversion_path
+        ]
+
+        log_file_path = os.path.join(path_log_dir, f"treshold_conversion_{var_input}.log")
+        print(f"    log_file_path: {log_file_path}")
+        execute_command(cmd, log_file_path, f"Conversion for tresholded input variable {var_input}")
+
+
+        # var target
+        conf_conversion = {
+            "folder_path": os.path.join(path_target_treshold_dir, var_target),
+            "output_path": os.path.join(conf.path_preproc_dir, "data.target", "treshold.converted", var_target + "." + conf.conversion_type),
+            "conversion_type": conf.conversion_type,
+            "variable_name": var_target
+        }
+
+        conf_conversion_path = os.path.join(path_conf_dir, f"conf.treshold.conversion.{var_target}.json")
+        with open(conf_conversion_path, "w") as f:
+            json.dump(conf_conversion, f, indent=4)
+        print(f"    Configuration file for conversion created for variable: {var_target}")
+        print(f"    conf_file_path: {conf_conversion_path}")
+
+        cmd = [
+            "mpirun",
+            "-np", str(conf.number_of_processes),
+            "python",
+            "converter_mpi.py",
+            "--config", conf_conversion_path
+        ]
+
+        log_file_path = os.path.join(path_log_dir, f"treshold_conversion_{var_target}.log")
+        print(f"    log_file_path: {log_file_path}")
+        execute_command(cmd, log_file_path, f"Conversion for tresholded target variable {var_target}")
+
+
+    print("[Conversion of tresholded variables completed]")
+# end run_treshold_conversion_layer
+
 def read_conf_file(conf_path):
     with open(conf_path, "r") as f:
         return json.load(f, object_hook=lambda data: SimpleNamespace(**data))
@@ -339,6 +416,7 @@ if __name__ == "__main__":
     print(f"interp_flag: {conf.interp_flag}")
     print(f"conversion_flag: {conf.conversion_flag}")
     print(f"treshold_flag: {conf.treshold_flag}")
+    print(f"treshold_conversion_flag: {conf.treshold_conversion_flag}")
     print(f"variables: {conf.variables}")
     print(f"conversion_variables: {conf.conversion_variables}")
     print(f"treshold_variables: {conf.treshold_variables}")
@@ -351,3 +429,6 @@ if __name__ == "__main__":
 
     if conf.treshold_flag == True:
         run_treshold_layer(conf)
+
+    if conf.treshold_conversion_flag == True:
+        run_treshold_conversion_layer(conf)

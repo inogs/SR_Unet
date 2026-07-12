@@ -14,6 +14,13 @@ path_conf_file = os.path.join(
     "conf_general.json"
 )
 
+apply_treshold_path = os.path.join(
+    os.path.dirname(__file__),
+    "..",
+    "postproc",
+    "apply_treshold_mpi.py"
+)
+
 def get_valid_variable_pairs(input_dir, target_dir, variables):
     list_valid_variable_pairs = {}
     for var_input, var_target in variables.items():
@@ -35,6 +42,17 @@ def print_variable_pairs(variable_pairs):
     print("List of valid variable pairs:")
     for var_input, var_target in variable_pairs.items():
         print(f"    {var_input} -> {var_target}")
+
+
+def get_valid_treshold_variables(variable_names, thresholds):
+    valid_variables = {}
+    for var_name in variable_names:
+        if var_name not in thresholds:
+            print(f"Warning: threshold not defined for variable {var_name}. Skipping treshold for variable: {var_name}")
+            continue
+        valid_variables[var_name] = thresholds[var_name]
+
+    return valid_variables
 
 
 def find_grid_file(target_folder, var_target):
@@ -211,6 +229,100 @@ def run_conversion_layer(conf):
     print("[Conversion of variables completed]")
 # end run_conversion_layer
 
+def run_treshold_layer(conf):
+    print("[Starting treshold application on variables]")
+
+    path_interpolation_out_dir = os.path.join(conf.path_preproc_dir, "data.input", "interpolated")
+    path_target_original_dir = os.path.join(conf.path_preproc_dir, "data.target", "original")
+    path_input_treshold_out_dir = os.path.join(conf.path_preproc_dir, "data.input", "treshold")
+    path_target_treshold_out_dir = os.path.join(conf.path_preproc_dir, "data.target", "treshold")
+    path_log_dir = os.path.join(conf.path_preproc_dir, "log")
+    path_conf_dir = os.path.join(conf.path_preproc_dir, "conf.files")
+    list_treshold_variables = vars(conf.treshold_variables)
+    list_thresholds = vars(conf.thresholds)
+
+    list_valid_variable_pairs = get_valid_variable_pairs(
+        path_interpolation_out_dir,
+        path_target_original_dir,
+        list_treshold_variables
+    )
+
+    print_variable_pairs(list_valid_variable_pairs)
+
+    list_valid_input_thresholds = get_valid_treshold_variables(
+        list_valid_variable_pairs.keys(), list_thresholds
+    )
+    list_valid_target_thresholds = get_valid_treshold_variables(
+        list_valid_variable_pairs.values(), list_thresholds
+    )
+
+    for var_input, treshold_value in list_valid_input_thresholds.items():
+        print(f"Processing input variable: {var_input}")
+
+        input_folder = os.path.join(path_interpolation_out_dir, var_input)
+        output_folder = os.path.join(path_input_treshold_out_dir, var_input)
+        os.makedirs(output_folder, exist_ok=True)
+
+        conf_treshold = {
+            "folder_path": input_folder,
+            "output_path": output_folder,
+            "variable_name": var_input,
+            "treshold": treshold_value
+        }
+
+        conf_treshold_path = os.path.join(path_conf_dir, f"conf.treshold.{var_input}.json")
+        with open(conf_treshold_path, "w") as f:
+            json.dump(conf_treshold, f, indent=4)
+        print(f"    Configuration file for treshold created for variable: {var_input}")
+        print(f"    conf_file_path: {conf_treshold_path}")
+
+        cmd = [
+            "mpirun",
+            "-np", str(conf.number_of_processes),
+            "python",
+            apply_treshold_path,
+            "--config", conf_treshold_path
+        ]
+
+        log_file_path = os.path.join(path_log_dir, f"treshold_{var_input}.log")
+        print(f"    log_file_path: {log_file_path}")
+        execute_command(cmd, log_file_path, f"Treshold for input variable {var_input}")
+
+    for var_target, treshold_value in list_valid_target_thresholds.items():
+        print(f"Processing target variable: {var_target}")
+
+        target_folder = os.path.join(path_target_original_dir, var_target)
+        output_folder = os.path.join(path_target_treshold_out_dir, var_target)
+        os.makedirs(output_folder, exist_ok=True)
+
+        conf_treshold = {
+            "folder_path": target_folder,
+            "output_path": output_folder,
+            "variable_name": var_target,
+            "treshold": treshold_value
+        }
+
+        conf_treshold_path = os.path.join(path_conf_dir, f"conf.treshold.{var_target}.json")
+        with open(conf_treshold_path, "w") as f:
+            json.dump(conf_treshold, f, indent=4)
+        print(f"    Configuration file for treshold created for variable: {var_target}")
+        print(f"    conf_file_path: {conf_treshold_path}")
+
+        cmd = [
+            "mpirun",
+            "-np", str(conf.number_of_processes),
+            "python",
+            apply_treshold_path,
+            "--config", conf_treshold_path
+        ]
+
+        log_file_path = os.path.join(path_log_dir, f"treshold_{var_target}.log")
+        print(f"    log_file_path: {log_file_path}")
+        execute_command(cmd, log_file_path, f"Treshold for target variable {var_target}")
+
+    print("[Treshold application on variables completed]")
+# end run_treshold_layer
+
 def read_conf_file(conf_path):
     with open(conf_path, "r") as f:
         return json.load(f, object_hook=lambda data: SimpleNamespace(**data))
@@ -226,11 +338,16 @@ if __name__ == "__main__":
     print(f"number_of_processes: {conf.number_of_processes}")
     print(f"interp_flag: {conf.interp_flag}")
     print(f"conversion_flag: {conf.conversion_flag}")
+    print(f"treshold_flag: {conf.treshold_flag}")
     print(f"variables: {conf.variables}")
     print(f"conversion_variables: {conf.conversion_variables}")
+    print(f"treshold_variables: {conf.treshold_variables}")
 
     if conf.interp_flag == True:
         run_interpolation_layer(conf)
 
     if conf.conversion_flag == True:
         run_conversion_layer(conf)
+
+    if conf.treshold_flag == True:
+        run_treshold_layer(conf)

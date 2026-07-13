@@ -1,0 +1,6 @@
+{
+    "input_path": "/path/to/split/output/chl.train.txt",
+    "output_path": "/path/to/stat/output/folder",
+    "number_of_threads": 4,
+    "var_name": "chl"
+}

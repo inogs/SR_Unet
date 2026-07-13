@@ -126,6 +126,11 @@ if __name__== "__main__":
     conf = read_conf_file(args.config)
     validate_conf(conf)
 
+    output_file_path = os.path.join(conf.output_path, conf.output_file_name)
+    if os.path.exists(output_file_path):
+        print(f"Output file {output_file_path} already exists, skipping pt creation.")
+        sys.exit(0)
+
     files_list_targets = read_file_list(conf.path_target)
     files_list_inputs = read_file_list(conf.path_input)
     # check that the number of target and input files match
@@ -164,7 +169,6 @@ if __name__== "__main__":
     torch_ds = torch.utils.data.TensorDataset(torch.Tensor(storage_input), torch.Tensor(storage_target))
     print(f"    Dataset shape: {torch_ds.tensors[0].shape}, {torch_ds.tensors[1].shape}")
     os.makedirs(conf.output_path, exist_ok=True)
-    output_file_path = os.path.join(conf.output_path, conf.output_file_name)
     torch.save(torch_ds, output_file_path)
     print(f"    Dataset saved in {output_file_path}")
 

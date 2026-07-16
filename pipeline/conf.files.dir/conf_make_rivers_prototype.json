@@ -1,5 +1,0 @@
-{
-    "input_path": "/path/to/rivers.train.txt",
-    "output_path": "/path/to/output/rivers",
-    "label": "train"
-}

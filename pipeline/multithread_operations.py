@@ -54,7 +54,7 @@ def run_split_layer(conf):
     os.makedirs(os.path.join(conf.path_preproc_dir, "splits", split_label, "pt.files"), exist_ok=True)
 
     path_conf_dir = os.path.join(conf.path_preproc_dir, "conf.files")
-    split_script_path = os.path.join(os.path.dirname(__file__), "split_v2.py")
+    split_script_path = os.path.join(os.path.dirname(__file__), "split.py")
     path_log_dir = os.path.join(conf.path_preproc_dir, "log")
     path_split_input_interpolated_dir = os.path.join(conf.path_preproc_dir, "splits", split_label, "input", "interpolated")
     path_split_input_converted_dir = os.path.join(conf.path_preproc_dir, "splits", split_label, "input", "converted")
@@ -316,7 +316,7 @@ def compute_statistics(conf):
     os.makedirs(os.path.join(conf.path_preproc_dir, "splits", split_label, "stat.target", "treshold.converted"), exist_ok=True)
 
     path_conf_dir = os.path.join(conf.path_preproc_dir, "conf.files")
-    stat_script_path = os.path.join(os.path.dirname(__file__), "stat_v2.py")
+    stat_script_path = os.path.join(os.path.dirname(__file__), "stat.py")
     path_log_dir = os.path.join(conf.path_preproc_dir, "log")
 
     path_split_input_interpolated_dir = os.path.join(conf.path_preproc_dir, "splits", split_label, "input", "interpolated")

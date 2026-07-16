@@ -22,7 +22,7 @@ def parse_input_parameters():
         "-c",
         "--config",
         default=os.path.join(
-            os.path.dirname(__file__), "conf.files.dir", "conf_stat_v2.json"
+            os.path.dirname(__file__), "conf.files.dir", "conf_stat.json"
         ),
         help="Path to configuration file.",
     )

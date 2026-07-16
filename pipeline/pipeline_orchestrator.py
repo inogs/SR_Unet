@@ -75,9 +75,9 @@ def check_conf(conf):
         if not hasattr(step, "enabled") or step.enabled
     ]
 
-    if "mpi_op_v2" in enabled_steps and "multithread_op" in enabled_steps:
+    if "mpi_operations" in enabled_steps and "multithread_operations" in enabled_steps:
         print(
-            "Warning: mpi_op_v2 and multithread_op are both enabled. "
+            "Warning: mpi_operations and multithread_operations are both enabled. "
             "Enable only one execution layer. Exiting."
         )
         raise SystemExit(1)

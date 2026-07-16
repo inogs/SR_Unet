@@ -13,7 +13,7 @@ def parse_input_parameters():
         default=os.path.join(
             os.path.dirname(__file__),
             "conf.files.dir",
-            "conf_create_structure_v3.json",
+            "conf_create_structure.json",
         ),
         help="Path to the JSON configuration file.",
     )

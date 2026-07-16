@@ -1,0 +1,70 @@
+{
+    "general": {
+        "path_preproc_dir": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME_DEVELOP",
+        "path_training_dir": "/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/training/TRAIN",
+        "split_label": "split.develop",
+        "conversion_type": "log",
+        "variables": {
+            "chl": "Chla",
+            "no3": "N3n",
+            "po4": "N1p",
+            "so": "S",
+            "thetao": "T"
+        },
+        "conversion_variables": {
+            "chl": "Chla",
+            "no3": "N3n",
+            "po4": "N1p"
+        },
+        "treshold_variables": {
+            "chl": "Chla",
+            "no3": "N3n",
+            "po4": "N1p"
+        }
+    },
+    "train_conf": {
+        "n_var": 1,
+        "n_riv": 19,
+        "river_flag": true,
+        "seed": 0,
+        "main_net": "unet",
+        "data_dim": {
+            "height": 300,
+            "width": 494,
+            "depth": 27
+        },
+        "n_gpus": 1,
+        "shuffle": {
+            "train": true,
+            "val": false,
+            "test": false
+        },
+        "training": {
+            "loss": "mse",
+            "lr": 0.001,
+            "max_epochs": 2,
+            "precision": "bf16-mixed",
+            "patience": 10,
+            "train_batch_size": 4,
+            "val_batch_size": 4,
+            "accumulate_grad_batches": 1
+        }
+    },
+    "job": {
+        "nodes": 1,
+        "ntasks_per_node": 4,
+        "gres": "gpu:4",
+        "cpus_per_task": 8,
+        "time": "00:45:00",
+        "account": "OGS23_PRACE_IT_0",
+        "partition": "boost_usr_prod",
+        "job_name": "Unet.Train",
+        "conda_base_path": "/leonardo/home/userexternal/gzuccari/conda_test/miniforge3",
+        "conda_env": "torch_test",
+        "train_script_path": "/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/train_prod.py",
+        "debug": {
+            "enabled": false,
+            "qos": "boost_qos_dbg"
+        }
+    }
+}

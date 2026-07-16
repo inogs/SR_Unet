@@ -1,6 +1,0 @@
-{
-    "input_path": "/path/to/folder/with/txt/lists",
-    "output_path": "/path/to/output/folder",
-    "jobs": 4,
-    "recursive": false
-}

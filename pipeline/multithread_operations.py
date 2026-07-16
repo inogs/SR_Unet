@@ -347,7 +347,7 @@ def compute_statistics(conf):
         conf_stat = {
             "input_path": os.path.join(path_split_input_interpolated_dir, f"{var_input}.train.txt"),
             "output_path": path_stat_input_interpolated_dir,
-            "number_of_threads": conf.number_of_threads,
+            "number_of_threads": conf.multithread_operations.number_of_threads,
             "var_name": var_input,
         }
 
@@ -366,7 +366,7 @@ def compute_statistics(conf):
         conf_stat = {
             "input_path": os.path.join(path_split_target_original_dir, f"{var_target}.train.txt"),
             "output_path": path_stat_target_original_dir,
-            "number_of_threads": conf.number_of_threads,
+            "number_of_threads": conf.multithread_operations.number_of_threads,
             "var_name": var_target,
         }
 
@@ -396,7 +396,7 @@ def compute_statistics(conf):
         conf_stat = {
             "input_path": os.path.join(path_split_input_converted_dir, f"{converted_var_input}.train.txt"),
             "output_path": path_stat_input_converted_dir,
-            "number_of_threads": conf.number_of_threads,
+            "number_of_threads": conf.multithread_operations.number_of_threads,
             "var_name": var_input,
         }
 
@@ -415,7 +415,7 @@ def compute_statistics(conf):
         conf_stat = {
             "input_path": os.path.join(path_split_target_converted_dir, f"{converted_var_target}.train.txt"),
             "output_path": path_stat_target_converted_dir,
-            "number_of_threads": conf.number_of_threads,
+            "number_of_threads": conf.multithread_operations.number_of_threads,
             "var_name": var_target,
         }
 
@@ -442,7 +442,7 @@ def compute_statistics(conf):
         conf_stat = {
             "input_path": os.path.join(path_split_input_treshold_dir, f"{var_input}.train.txt"),
             "output_path": path_stat_input_treshold_dir,
-            "number_of_threads": conf.number_of_threads,
+            "number_of_threads": conf.multithread_operations.number_of_threads,
             "var_name": var_input,
         }
 
@@ -461,7 +461,7 @@ def compute_statistics(conf):
         conf_stat = {
             "input_path": os.path.join(path_split_target_treshold_dir, f"{var_target}.train.txt"),
             "output_path": path_stat_target_treshold_dir,
-            "number_of_threads": conf.number_of_threads,
+            "number_of_threads": conf.multithread_operations.number_of_threads,
             "var_name": var_target,
         }
 
@@ -484,7 +484,7 @@ def compute_statistics(conf):
         conf_stat = {
             "input_path": os.path.join(path_split_input_treshold_converted_dir, f"{converted_var_input}.train.txt"),
             "output_path": path_stat_input_treshold_converted_dir,
-            "number_of_threads": conf.number_of_threads,
+            "number_of_threads": conf.multithread_operations.number_of_threads,
             "var_name": var_input,
         }
 
@@ -503,7 +503,7 @@ def compute_statistics(conf):
         conf_stat = {
             "input_path": os.path.join(path_split_target_treshold_converted_dir, f"{converted_var_target}.train.txt"),
             "output_path": path_stat_target_treshold_converted_dir,
-            "number_of_threads": conf.number_of_threads,
+            "number_of_threads": conf.multithread_operations.number_of_threads,
             "var_name": var_target,
         }
 
@@ -558,7 +558,7 @@ def compute_pt(conf):
     for var_input, var_target in list_variables.items():
         for pt_type in list_pt_types:
             conf_pt = {
-                "n_workers": conf.number_of_threads,
+                "n_workers": conf.multithread_operations.number_of_threads,
                 "path_target": os.path.join(path_split_target_original_dir, f"{var_target}.{pt_type}.txt"),
                 "path_input": os.path.join(path_split_input_interpolated_dir, f"{var_input}.{pt_type}.txt"),
                 "stat_target": os.path.join(path_stat_target_original_dir, f"stat.{var_target}.train.txt"),
@@ -596,7 +596,7 @@ def compute_pt(conf):
 
         for pt_type in list_pt_types:
             conf_pt = {
-                "n_workers": conf.number_of_threads,
+                "n_workers": conf.multithread_operations.number_of_threads,
                 "path_target": os.path.join(path_split_target_converted_dir, f"{converted_var_target}.{pt_type}.txt"),
                 "path_input": os.path.join(path_split_input_converted_dir, f"{converted_var_input}.{pt_type}.txt"),
                 "stat_target": os.path.join(path_stat_target_converted_dir, f"stat.{converted_var_target}.train.txt"),
@@ -631,7 +631,7 @@ def compute_pt(conf):
     for var_input, var_target in list_treshold_variables.items():
         for pt_type in list_pt_types:
             conf_pt = {
-                "n_workers": conf.number_of_threads,
+                "n_workers": conf.multithread_operations.number_of_threads,
                 "path_target": os.path.join(path_split_target_treshold_dir, f"{var_target}.{pt_type}.txt"),
                 "path_input": os.path.join(path_split_input_treshold_dir, f"{var_input}.{pt_type}.txt"),
                 "stat_target": os.path.join(path_stat_target_treshold_dir, f"stat.{var_target}.train.txt"),
@@ -665,7 +665,7 @@ def compute_pt(conf):
 
         for pt_type in list_pt_types:
             conf_pt = {
-                "n_workers": conf.number_of_threads,
+                "n_workers": conf.multithread_operations.number_of_threads,
                 "path_target": os.path.join(path_split_target_treshold_converted_dir, f"{converted_var_target}.{pt_type}.txt"),
                 "path_input": os.path.join(path_split_input_treshold_converted_dir, f"{converted_var_input}.{pt_type}.txt"),
                 "stat_target": os.path.join(path_stat_target_treshold_converted_dir, f"stat.{converted_var_target}.train.txt"),
@@ -727,21 +727,19 @@ if __name__ == "__main__":
     print(f"path_input_dir: {conf.path_input_dir}")
     print(f"path_preproc_dir: {conf.path_preproc_dir}")
     print(f"conversion_type: {conf.conversion_type}")
-    print(f"number_of_processes: {conf.number_of_processes}")
-    print(f"interp_flag: {conf.interp_flag}")
-    print(f"conversion_flag: {conf.conversion_flag}")
+    print(f"number_of_threads: {conf.multithread_operations.number_of_threads}")
     print(f"variables: {conf.variables}")
     print(f"conversion_variables: {conf.conversion_variables}")
     print(f"split: {conf.split}")
-    print(f"split_flag: {conf.split_flag}")
-    print(f"compute_statistics_flag: {conf.compute_statistics_flag}")
-    print(f"compute_pt_flag: {conf.compute_pt_flag}")
+    print(f"split_flag: {conf.multithread_operations.split_flag}")
+    print(f"compute_statistics_flag: {conf.multithread_operations.compute_statistics_flag}")
+    print(f"compute_pt_flag: {conf.multithread_operations.compute_pt_flag}")
 
-    if conf.split_flag == True:
+    if conf.multithread_operations.split_flag == True:
         run_split_layer(conf)
 
-    if conf.compute_statistics_flag == True:
+    if conf.multithread_operations.compute_statistics_flag == True:
         compute_statistics(conf)
 
-    if conf.compute_pt_flag == True:
+    if conf.multithread_operations.compute_pt_flag == True:
         compute_pt(conf)

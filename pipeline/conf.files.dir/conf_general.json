@@ -23,14 +23,19 @@
     "path_input_dir": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC",
     "path_preproc_dir": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME_DEVELOP",
     "conversion_type": "log",
-    "number_of_processes": 48,
-    "interp_flag": false,
-    "conversion_flag": false,
-    "treshold_flag": false,
-    "treshold_conversion_flag": true,
-    "split_flag": true,
-    "compute_statistics_flag": false,
-    "compute_pt_flag": true,
+    "mpi_operations": {
+        "number_of_processes": 48,
+        "interp_flag": false,
+        "conversion_flag": false,
+        "treshold_flag": false,
+        "treshold_conversion_flag": true
+    },
+    "multithread_operations": {
+        "number_of_threads": 1,
+        "split_flag": true,
+        "compute_statistics_flag": false,
+        "compute_pt_flag": true
+    },
     "variables": {
         "chl": "Chla",
         "no3": "N3n",
@@ -61,6 +66,5 @@
         "test_size": 0.2,
         "validation_size": 0.1,
         "seed": 42
-    },
-    "number_of_threads": 1
+    }
 }

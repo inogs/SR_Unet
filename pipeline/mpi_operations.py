@@ -142,7 +142,7 @@ def run_interpolation_layer(conf):
 
         cmd = [
             "mpirun",
-            "-np", str(conf.number_of_processes),
+            "-np", str(conf.mpi_operations.number_of_processes),
             "python",
             "interpolate_bilinear.py",
             "--config", conf_interpolation_path
@@ -188,7 +188,7 @@ def run_conversion_layer(conf):
 
         cmd = [
             "mpirun",
-            "-np", str(conf.number_of_processes),
+            "-np", str(conf.mpi_operations.number_of_processes),
             "python",
             "converter_mpi.py",
             "--config", conf_conversion_path
@@ -215,7 +215,7 @@ def run_conversion_layer(conf):
 
         cmd = [
             "mpirun",
-            "-np", str(conf.number_of_processes),
+            "-np", str(conf.mpi_operations.number_of_processes),
             "python",
             "converter_mpi.py",
             "--config", conf_conversion_path
@@ -278,7 +278,7 @@ def run_treshold_layer(conf):
 
         cmd = [
             "mpirun",
-            "-np", str(conf.number_of_processes),
+            "-np", str(conf.mpi_operations.number_of_processes),
             "python",
             apply_treshold_path,
             "--config", conf_treshold_path
@@ -310,7 +310,7 @@ def run_treshold_layer(conf):
 
         cmd = [
             "mpirun",
-            "-np", str(conf.number_of_processes),
+            "-np", str(conf.mpi_operations.number_of_processes),
             "python",
             apply_treshold_path,
             "--config", conf_treshold_path
@@ -359,7 +359,7 @@ def run_treshold_conversion_layer(conf):
 
         cmd = [
             "mpirun",
-            "-np", str(conf.number_of_processes),
+            "-np", str(conf.mpi_operations.number_of_processes),
             "python",
             "converter_mpi.py",
             "--config", conf_conversion_path
@@ -386,7 +386,7 @@ def run_treshold_conversion_layer(conf):
 
         cmd = [
             "mpirun",
-            "-np", str(conf.number_of_processes),
+            "-np", str(conf.mpi_operations.number_of_processes),
             "python",
             "converter_mpi.py",
             "--config", conf_conversion_path
@@ -412,23 +412,23 @@ if __name__ == "__main__":
     print(f"path_input_dir: {conf.path_input_dir}")
     print(f"path_preproc_dir: {conf.path_preproc_dir}")
     print(f"conversion_type: {conf.conversion_type}")
-    print(f"number_of_processes: {conf.number_of_processes}")
-    print(f"interp_flag: {conf.interp_flag}")
-    print(f"conversion_flag: {conf.conversion_flag}")
-    print(f"treshold_flag: {conf.treshold_flag}")
-    print(f"treshold_conversion_flag: {conf.treshold_conversion_flag}")
+    print(f"number_of_processes: {conf.mpi_operations.number_of_processes}")
+    print(f"interp_flag: {conf.mpi_operations.interp_flag}")
+    print(f"conversion_flag: {conf.mpi_operations.conversion_flag}")
+    print(f"treshold_flag: {conf.mpi_operations.treshold_flag}")
+    print(f"treshold_conversion_flag: {conf.mpi_operations.treshold_conversion_flag}")
     print(f"variables: {conf.variables}")
     print(f"conversion_variables: {conf.conversion_variables}")
     print(f"treshold_variables: {conf.treshold_variables}")
 
-    if conf.interp_flag == True:
+    if conf.mpi_operations.interp_flag == True:
         run_interpolation_layer(conf)
 
-    if conf.conversion_flag == True:
+    if conf.mpi_operations.conversion_flag == True:
         run_conversion_layer(conf)
 
-    if conf.treshold_flag == True:
+    if conf.mpi_operations.treshold_flag == True:
         run_treshold_layer(conf)
 
-    if conf.treshold_conversion_flag == True:
+    if conf.mpi_operations.treshold_conversion_flag == True:
         run_treshold_conversion_layer(conf)

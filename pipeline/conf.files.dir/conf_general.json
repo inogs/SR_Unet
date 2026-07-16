@@ -4,18 +4,18 @@
             {
                 "name": "create_structure",
                 "enabled": true,
-                "script": "create_structure_v3.py",
-                "config": "conf.files.dir/conf_create_structure_v3.json"
+                "script": "create_structure.py",
+                "config": "conf.files.dir/conf_create_structure.json"
             },
             {
-                "name": "mpi_op_v2",
+                "name": "mpi_operations",
                 "enabled": true,
-                "script": "mpi_op_v2.py"
+                "script": "mpi_operations.py"
             },
             {
-                "name": "multithread_op",
+                "name": "multithread_operations",
                 "enabled": true,
-                "script": "multithread_op.py"
+                "script": "multithread_operations.py"
             }
         ]
     },

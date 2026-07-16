@@ -1,5 +1,5 @@
 {
-    "input_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/split/original.variables/N1p.test.txt",
+    "input_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/target/split/original.variables/S.test.txt",
     "output_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/postprocessing/montly.analysis/montly.file.lists",
     "output_folder_name": "N1p.test.months"
 }

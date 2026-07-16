@@ -1,15 +1,12 @@
 {
-    "root": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME_DEVELOP",
     "tree": {
         "data.input": {
-            "original": {},
             "interpolated": {},
             "converted": {},
             "treshold": {},
             "treshold.converted": {}
         },
         "data.target": {
-            "original": {},
             "converted": {},
             "treshold": {},
             "treshold.converted": {}

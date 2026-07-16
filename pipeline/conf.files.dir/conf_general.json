@@ -5,26 +5,27 @@
                 "name": "create_structure",
                 "enabled": true,
                 "script": "create_structure.py",
-                "config": "conf.files.dir/conf_create_structure.json"
+                "config": "conf.files.dir/preproc_structure.json"
             },
             {
                 "name": "mpi_operations",
-                "enabled": true,
+                "enabled": false,
                 "script": "mpi_operations.py"
             },
             {
                 "name": "multithread_operations",
-                "enabled": true,
+                "enabled": false,
                 "script": "multithread_operations.py"
             }
         ]
     },
     "path_target_dir": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup",
     "path_input_dir": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC",
-    "path_preproc_dir": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME_DEVELOP",
+    "path_rivers_dir": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/rivers/rivers",
+    "path_preproc_dir": "/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/pipeline/OPA_HOME_TEST",
     "conversion_type": "log",
     "mpi_operations": {
-        "number_of_processes": 48,
+        "number_of_processes": 1,
         "interp_flag": false,
         "conversion_flag": false,
         "treshold_flag": false,

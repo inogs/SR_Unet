@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import pytorch_lightning as pl
-from models.convolutional.losses_bkp import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse, masked_rmse_relative
+from models.convolutional.losses_bkp import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse, masked_mse, masked_rmse_exp_log
 from models.convolutional.networks import UNet3D_MCD
 
 
@@ -10,7 +10,7 @@ class ConvModel(pl.LightningModule):
         Loss function can be either rmse, mse, perceptual.
         The number of channels must consider just the variables (i.e., not the river channel)
     '''
-    def __init__(self, main_net, n_dimensions, riv_net=False, loss='rmse', num_channels=1, riv_in_dim=None, riv_out_dim=None, lr=1e-3, stats=None):
+    def __init__(self, main_net, n_dimensions, riv_net=False, loss='rmse', num_channels=1, riv_in_dim=None, riv_out_dim=None, lr=1e-3, stats=None, log_transform = False):
         super(ConvModel, self).__init__()
 
         self.save_hyperparameters()
@@ -40,6 +40,7 @@ class ConvModel(pl.LightningModule):
         self.n_dimensions = n_dimensions
         self.lr = lr
         self.stats = stats
+        self.log_transform = log_transform
 
     def forward(self, x, riv=None, riv_mask=None):
         x = self.main_net(x, riv)
@@ -119,18 +120,26 @@ class ConvModel(pl.LightningModule):
             pred = self.forward(x)
 
         loss = self.loss(pred, y, mask)
-        psnr_score = masked_psnr(pred, y, mask)
+        # psnr_score = masked_psnr(pred, y, mask)
         #MODIFICA
         self.log('val_loss', loss,
                  on_step=False,
                  on_epoch=True,
                  prog_bar=True,
                  sync_dist=True)
-        self.log('val_psnr', psnr_score,
-                 on_step=False,
-                 on_epoch=True,
-                 prog_bar =True,
-                 sync_dist=True)
+        # self.log('val_psnr', psnr_score,
+        #          on_step=False,
+        #          on_epoch=True,
+        #          prog_bar =True,
+        #          sync_dist=True)
+
+
+    def on_test_start(self):
+        self.test_rmse_values = []
+        self.test_mse_values = [] 
+        self.test_ssim_values = []
+        if self.log_transform:
+            self.test_exp_rmse = []
 
     def test_step(self, test_batch, batch_idx):
 
@@ -148,14 +157,32 @@ class ConvModel(pl.LightningModule):
         else:
             pred = self.forward(x)
 
-        loss = self.loss(pred, y, mask)
-        psnr_score = masked_psnr(pred, y, mask)
+        # psnr_score = masked_psnr(pred, y, mask)
         ssim_score = masked_ssim(pred, y, mask)
+        mse_score = masked_mse(pred, y, mask)
+
+        self.test_mse_values.append(mse_score.detach())
+        self.test_ssim_values.append(ssim_score.detach())
+
         if self.stats is not None:
             rmse_score = masked_rmse(pred, y, mask, self.stats)
-            r_rmse_score = masked_rmse_relative(pred, y, mask, self.stats)
-            self.log('test_rmse', rmse_score, sync_dist=True)
-            self.log('test_relative_rmse', r_rmse_score, sync_dist=True)
-        self.log('test_loss', loss, sync_dist=True)
-        self.log('test_psnr', psnr_score, sync_dist=True)
+            # MODIFICA PER AGGIUNGERE CALCOLO SD
+            self.test_rmse_values.append(rmse_score.detach())
+
+            self.log('test_rmse', rmse_score, sync_dist=True) # defoult on_epoch=True -> il valore finale è la media delle rmse per ogni batch, batch che nel test è formato da un solo campione
+
+            if self.log_transform:
+                rmse_score_on_exp = masked_rmse_exp_log(pred, y, mask, self.stats)
+                self.test_exp_rmse.append(rmse_score_on_exp.detach())
+                self.log('test_rmse_on_exp_pred_log', rmse_score_on_exp, sync_dist=True)
+        # self.log('test_psnr', psnr_score, sync_dist=True)
         self.log('test_ssim', ssim_score, sync_dist=True)
+        self.log('test_mse', mse_score, sync_dist=True)
+
+    def on_test_epoch_end(self):
+        self.log("test_rmse_std", torch.stack(self.test_rmse_values).std(), sync_dist=True)
+        if self.log_transform:
+            self.log("test_exp_rmse_std", torch.stack(self.test_exp_rmse).std(), sync_dist=True)
+        self.log("test_ssim_std", torch.stack(self.test_ssim_values).std(), sync_dist=True)
+        self.log("test_mse_std", torch.stack(self.test_mse_values).std(), sync_dist=True)
+

@@ -88,12 +88,25 @@ def file_stats(path, variable):
         if variable not in ds.variables:
             raise KeyError(f"{variable} not found in {path}")
 
-        array = ds[variable][:]
+        nc_var = ds[variable]
+        array = nc_var[:]
 
         mu = float(ma.mean(array))
         var = float(ma.var(array))
+        data_min = float(ma.min(array))
+        data_max = float(ma.max(array))
 
-    return mu, var
+        if "depth" in nc_var.dimensions:
+            idx = [slice(None)] * nc_var.ndim
+            idx[nc_var.dimensions.index("depth")] = 0
+            surface_array = array[tuple(idx)]
+        else:
+            surface_array = array
+
+        surface_min = float(ma.min(surface_array))
+        surface_max = float(ma.max(surface_array))
+
+    return mu, var, data_min, data_max, surface_min, surface_max
 
 
 def file_stats_logged(path, variable):
@@ -139,19 +152,27 @@ def compute_list_stats(txt_path, variable, jobs):
                     [variable] * len(files)
                 ))
 
-    mus, vars_ = zip(*stats)
+    mus, vars_, mins, maxs, surface_mins, surface_maxs = zip(*stats)
 
     print(f"Computed per-file stats in {time.time() - t0:.2f} s")
 
     # --- combine ---
     t0 = time.time()
     mu_tot, sigma = combine_equal_mask(mus, vars_)
+    max_global = float(np.max(maxs))
+    min_global = float(np.min(mins))
+    max_surface = float(np.max(surface_maxs))
+    min_surface = float(np.min(surface_mins))
     print(f"Reduction done in {time.time() - t0:.4f} s")
 
-    print(f"Mean  = {mu_tot:.10e}")
-    print(f"Std   = {sigma:.10e}")
+    print(f"Mean         = {mu_tot:.10e}")
+    print(f"Std          = {sigma:.10e}")
+    print(f"Max (global) = {max_global:.10e}")
+    print(f"Min (global) = {min_global:.10e}")
+    print(f"Max (surface) = {max_surface:.10e}")
+    print(f"Min (surface) = {min_surface:.10e}")
 
-    return mu_tot, sigma
+    return mu_tot, sigma, max_global, min_global, max_surface, min_surface
 
 
 def write_stats(out_dir, name, mu_tot, sigma):
@@ -166,10 +187,39 @@ def write_stats(out_dir, name, mu_tot, sigma):
     print(f"Saved results to {out_path}")
 
 
+def write_stats_json(out_dir, name, mu_tot, sigma, max_global, min_global, max_surface, min_surface):
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"stat.{name}.json"
+
+    with open(out_path, "w") as f:
+        json.dump(
+            {
+                "mean": mu_tot,
+                "std": sigma,
+                "max_global": max_global,
+                "min_global": min_global,
+                "max_surface": max_surface,
+                "min_surface": min_surface,
+            },
+            f,
+            indent=4,
+        )
+        f.write("\n")
+
+    print(f"Saved results to {out_path}")
+
+
 if __name__ == "__main__":
     args = parse_input_parameters()
     conf = read_conf_file(args.config)
     validate_conf(conf)
 
-    mu_tot, sigma = compute_list_stats(conf.input_path, conf.var_name, conf.number_of_threads)
-    write_stats(conf.output_path, Path(conf.input_path).stem, mu_tot, sigma)
+    mu_tot, sigma, max_global, min_global, max_surface, min_surface = compute_list_stats(
+        conf.input_path, conf.var_name, conf.number_of_threads
+    )
+    name = Path(conf.input_path).stem
+    write_stats(conf.output_path, name, mu_tot, sigma)
+    write_stats_json(
+        conf.output_path, name, mu_tot, sigma, max_global, min_global, max_surface, min_surface
+    )

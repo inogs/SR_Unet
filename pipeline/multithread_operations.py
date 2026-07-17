@@ -584,7 +584,7 @@ def compute_pt(conf):
             print(f"    log_file_path: {log_file_path}")
 
             cmd = ["python", make_pt_script_path, "--config", conf_pt_path]
-            # execute_command(cmd, log_file_path, f"Pt creation for variable pairing {var_input} -> {var_target} ({pt_type})")
+            execute_command(cmd, log_file_path, f"Pt creation for variable pairing {var_input} -> {var_target} ({pt_type})")
 
 
     list_conversion_variables = vars(conf.conversion_variables)
@@ -622,7 +622,7 @@ def compute_pt(conf):
             print(f"    log_file_path: {log_file_path}")
 
             cmd = ["python", make_pt_script_path, "--config", conf_pt_path]
-            # execute_command(cmd, log_file_path, f"Pt creation for converted variable pairing {converted_var_input} -> {converted_var_target} ({pt_type})")
+            execute_command(cmd, log_file_path, f"Pt creation for converted variable pairing {converted_var_input} -> {converted_var_target} ({pt_type})")
 
 
     list_treshold_variables = vars(conf.treshold_variables)
@@ -657,7 +657,7 @@ def compute_pt(conf):
             print(f"    log_file_path: {log_file_path}")
 
             cmd = ["python", make_pt_script_path, "--config", conf_pt_path]
-            # execute_command(cmd, log_file_path, f"Pt creation for tresholded variable pairing {var_input} -> {var_target} ({pt_type})")
+            execute_command(cmd, log_file_path, f"Pt creation for tresholded variable pairing {var_input} -> {var_target} ({pt_type})")
 
 
         converted_var_input = f"{var_input}.{conf.conversion_type}"
@@ -691,7 +691,7 @@ def compute_pt(conf):
             print(f"    log_file_path: {log_file_path}")
 
             cmd = ["python", make_pt_script_path, "--config", conf_pt_path]
-            # execute_command(cmd, log_file_path, f"Pt creation for tresholded converted variable pairing {converted_var_input} -> {converted_var_target} ({pt_type})")
+            execute_command(cmd, log_file_path, f"Pt creation for tresholded converted variable pairing {converted_var_input} -> {converted_var_target} ({pt_type})")
 
 
     for pt_type in list_pt_types:

@@ -91,6 +91,8 @@ def build_debug_qos_line(debug_conf):
 
 
 def build_job_script(job_conf, out_dir, conf_json_path):
+    train_script_path = os.path.join(job_conf["path_source_dir"], "train_prod.py")
+
     return JOB_TEMPLATE.format(
         nodes=job_conf["nodes"],
         ntasks_per_node=job_conf["ntasks_per_node"],
@@ -104,7 +106,7 @@ def build_job_script(job_conf, out_dir, conf_json_path):
         debug_qos_line=build_debug_qos_line(job_conf["debug"]),
         conda_base_path=job_conf["conda_base_path"],
         conda_env=job_conf["conda_env"],
-        train_script_path=job_conf["train_script_path"],
+        train_script_path=train_script_path,
         conf_json_path=conf_json_path,
     )
 
@@ -160,6 +162,10 @@ if __name__ == "__main__":
     print(f"path_preproc_dir: {general_conf['path_preproc_dir']}")
     if not os.path.exists(general_conf["path_preproc_dir"]):
         raise FileNotFoundError(f"Preproc directory not found: {general_conf['path_preproc_dir']}")
+
+    print(f"path_source_dir: {job_conf['path_source_dir']}")
+    if not os.path.exists(job_conf["path_source_dir"]):
+        raise FileNotFoundError(f"Source directory not found: {job_conf['path_source_dir']}")
 
     print(f"path_training_dir: {general_conf['path_training_dir']}")
 

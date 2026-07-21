@@ -5,7 +5,7 @@ from pp_library_conf import read_compute_season_field_stats_conf
 from pp_library_nc import compute_list_field_stats, write_field
 
 
-conf_path = os.path.join(os.path.dirname(__file__), "conf_compute_season_stat_field.json")
+conf_path = os.path.join(os.path.dirname(__file__), "conf.files.dir", "conf_compute_season_stat_field.json")
 conf = read_compute_season_field_stats_conf(conf_path)
 
 path_input = conf.input_path

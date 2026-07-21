@@ -9,7 +9,7 @@ from pp_library import (
 from pp_library_conf import read_split_seasons_conf
 
 
-conf_split_seasons_path = os.path.join(os.path.dirname(__file__), "conf_split_seasons.json")
+conf_split_seasons_path = os.path.join(os.path.dirname(__file__), "conf.files.dir", "conf_split_seasons.json")
 conf_split_seasons = read_split_seasons_conf(conf_split_seasons_path)
 print(f"Configuration for split seasons: {conf_split_seasons}")
 

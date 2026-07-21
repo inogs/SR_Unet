@@ -12,7 +12,7 @@ from pp_library import (
 from pp_library_conf import ( read_split_months_conf)
 
 # setup block
-conf_split_months_path = os.path.join(os.path.dirname(__file__), "conf_split_months.json")
+conf_split_months_path = os.path.join(os.path.dirname(__file__), "conf.files.dir", "conf_split_months.json")
 conf_split_months = read_split_months_conf(conf_split_months_path)
 print(f"Configuration for split months: {conf_split_months}")
 path_input = conf_split_months.input_path

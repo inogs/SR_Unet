@@ -19,7 +19,7 @@ def parse_input_parameters():
     parser.add_argument(
         "-c",
         "--config",
-        default=os.path.join(os.path.dirname(__file__), "conf_apply_treshold_mpi.json"),
+        default=os.path.join(os.path.dirname(__file__), "conf.files.dir", "conf_apply_treshold_mpi.json"),
         help="Path to configuration file.",
     )
     return parser.parse_args()

@@ -21,3 +21,15 @@ def read_compute_monthly_stats_conf(path):
 
 def read_compute_season_field_stats_conf(path):
     return read_json_conf(path)
+
+
+def read_create_structure_conf(path):
+    return read_json_conf(path)
+
+
+def read_gpu_operations_conf(path):
+    return read_json_conf(path)
+
+
+def read_multithread_operations_conf(path):
+    return read_json_conf(path)

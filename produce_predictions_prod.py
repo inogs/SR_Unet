@@ -154,10 +154,8 @@ def load_stats(conf):
     stats = {}
     for var in conf["variables"]:
         with open(conf["stats_files"][var], "r") as file:
-            values = [np.float32(line.strip()) for line in file if line.strip()]
-        if len(values) < 2:
-            raise ValueError(f"Stats file must contain mean and std: {conf['stats_files'][var]}")
-        stats[var] = (values[0], values[1])
+            data = json.load(file)
+        stats[var] = (np.float32(data["mean"]), np.float32(data["std"]))
     return stats
 
 
@@ -255,6 +253,7 @@ def predict(conf):
         output_path = os.path.join(output_path, conf["prediction_subdir"])
 
     os.makedirs(output_path, exist_ok=True)
+    inference_time = 0.0
     with torch.no_grad():
         for start in range(0, x.shape[0], conf["batch_size"]):
             stop = min(start + conf["batch_size"], x.shape[0])
@@ -262,10 +261,18 @@ def predict(conf):
             batch[batch > conf["mask_threshold"]] = 0
             batch = batch.to(device)
 
+            if device.type == "cuda":
+                torch.cuda.synchronize()
+            t_inference = time.time()
+
             if rivers is None:
                 prediction = model(batch)
             else:
                 prediction = model(batch, rivers[start:stop].to(device))
+
+            if device.type == "cuda":
+                torch.cuda.synchronize()
+            inference_time += time.time() - t_inference
 
             for sample_offset, sample_index in enumerate(range(start, stop)):
                 for var_index, var in enumerate(conf["variables"]):
@@ -278,6 +285,9 @@ def predict(conf):
                         target_var,
                         pred_var,
                     )
+
+    test_name = os.path.basename(conf["test_path"])
+    print(f"[prediction for dataset '{test_name}'] Inference time: {inference_time:.2f} seconds")
 
 
 if __name__ == "__main__":

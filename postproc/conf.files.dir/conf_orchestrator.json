@@ -1,0 +1,71 @@
+{
+    "postproc_orchestrator": {
+        "steps": [
+            {
+                "name": "create_structure",
+                "enabled": true,
+                "script": "create_structure.py"
+            },
+            {
+                "name": "gpu_operations",
+                "enabled": false,
+                "script": "gpu_operations.py"
+            },
+            {
+                "name": "multithread_operations",
+                "enabled": true,
+                "script": "multithread_operations.py"
+            }
+        ]
+    },
+    "path_preproc_dir": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/01.preproc",
+    "path_training_dir": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/02.training/river_net",
+    "path_postproc_dir": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/03.postproc/river_net",
+    "split_label": "split.develop",
+    "conversion_type": "log",
+    "gpu_operations": {
+        "training_structure_path": "../training/conf/training_structure.json",
+        "produce_predictions_path": "../produce_predictions_prod.py",
+        "n_devices": 1,
+        "batch_size": 4,
+        "mask_threshold": 1000000.0,
+        "device": "auto",
+        "seed": 0
+    },
+    "multithread_operations": {
+        "training_structure_path": "../training/conf/training_structure.json",
+        "number_of_jobs": 32,
+        "scripts": {
+            "split_months": "split_months.py",
+            "split_seasons": "split_seasons.py",
+            "compute_monthly_stats": "compute_monthly_stats.py",
+            "compute_season_stat_field": "compute_season_stat_field.py"
+        },
+        "groups": {
+            "input": false,
+            "target": false,
+            "predictions": true
+        },
+        "statistics": {
+            "monthly": true,
+            "seasonal": true
+        }
+    },
+    "variables": {
+        "chl": "Chla",
+        "no3": "N3n",
+        "po4": "N1p",
+        "so": "S",
+        "thetao": "T"
+    },
+    "conversion_variables": {
+        "chl": "Chla",
+        "no3": "N3n",
+        "po4": "N1p"
+    },
+    "treshold_variables": {
+        "chl": "Chla",
+        "no3": "N3n",
+        "po4": "N1p"
+    }
+}

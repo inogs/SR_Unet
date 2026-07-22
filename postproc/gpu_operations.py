@@ -79,8 +79,11 @@ def run_predictions(conf):
     path_conf_dir = os.path.join(conf.path_postproc_dir, "conf.files")
     path_log_dir = os.path.join(conf.path_postproc_dir, "log")
 
-    rivers_test_path = os.path.join(path_pt_dir, "rivers_test.pt")
-    river_path = rivers_test_path if os.path.isfile(rivers_test_path) else None
+    river_path = None
+    if gpu_conf.river_flag:
+        river_path = os.path.join(path_pt_dir, "rivers_test.pt")
+        if not os.path.isfile(river_path):
+            raise FileNotFoundError(f"river_flag is enabled but rivers pt file not found: {river_path}")
 
     for category, variables_key, suffixed, pt_prefix in read_data_type_specs(training_structure_path):
         variables = vars(getattr(conf, variables_key))

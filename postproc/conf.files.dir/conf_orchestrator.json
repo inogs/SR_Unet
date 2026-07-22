@@ -26,6 +26,7 @@
     "gpu_operations": {
         "training_structure_path": "../training/conf/training_structure.json",
         "produce_predictions_path": "../produce_predictions_prod.py",
+        "river_flag": true,
         "n_devices": 1,
         "batch_size": 4,
         "mask_threshold": 1000000.0,

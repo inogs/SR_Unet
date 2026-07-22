@@ -12,6 +12,11 @@
                 "script": "gpu_operations.py"
             },
             {
+                "name": "mpi_operations",
+                "enabled": false,
+                "script": "mpi_operations.py"
+            },
+            {
                 "name": "multithread_operations",
                 "enabled": true,
                 "script": "multithread_operations.py"
@@ -33,6 +38,35 @@
         "device": "auto",
         "seed": 0
     },
+    "mpi_operations": {
+        "training_structure_path": "../training/conf/training_structure.json",
+        "apply_treshold_path": "apply_treshold_mpi.py",
+        "converter_path": "../pipeline/converter_mpi.py",
+        "number_of_processes": 32,
+        "thresholds": {
+            "Chla": 0.00001,
+            "N1p": 0.001,
+            "N3n": 0.001
+        },
+        "categories": {
+            "original": {
+                "conversion_type": "log",
+                "threshold_in_log_space": false
+            },
+            "converted": {
+                "conversion_type": "exp",
+                "threshold_in_log_space": true
+            },
+            "treshold": {
+                "conversion_type": "log",
+                "threshold_in_log_space": false
+            },
+            "treshold.converted": {
+                "conversion_type": "exp",
+                "threshold_in_log_space": true
+            }
+        }
+    },
     "multithread_operations": {
         "training_structure_path": "../training/conf/training_structure.json",
         "number_of_jobs": 32,
@@ -43,9 +77,9 @@
             "compute_season_stat_field": "compute_season_stat_field.py"
         },
         "groups": {
-            "input": false,
-            "target": false,
-            "predictions": true
+            "input": true,
+            "target": true,
+            "predictions": false
         },
         "statistics": {
             "monthly": true,

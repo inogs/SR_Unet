@@ -43,6 +43,12 @@ def input_subdir_name(category):
     return "interpolated" if category == "original" else category
 
 
+def prediction_output_dir(path_postproc_dir, category, pair_name, staged_categories):
+    if category in staged_categories:
+        return os.path.join(path_postproc_dir, "predictions", "test.dataset", category, "raw", pair_name)
+    return os.path.join(path_postproc_dir, "predictions", "test.dataset", category, pair_name)
+
+
 def find_weight_file(out_dir):
     candidates = sorted(glob.glob(os.path.join(out_dir, "best_*.ckpt")))
     return candidates[0] if candidates else None
@@ -73,6 +79,7 @@ def run_predictions(conf):
 
     training_structure_path = resolve_postproc_path(gpu_conf.training_structure_path)
     produce_predictions_path = resolve_postproc_path(gpu_conf.produce_predictions_path)
+    staged_categories = vars(conf.mpi_operations.categories).keys()
 
     split_label = conf.split_label
     path_pt_dir = os.path.join(conf.path_preproc_dir, "splits", split_label, "pt.files")
@@ -106,9 +113,7 @@ def run_predictions(conf):
             prediction_conf = {
                 "weight_file": weight_file,
                 "test_path": os.path.join(path_pt_dir, f"{pt_basename}.test.dataset.pt"),
-                "output_path": os.path.join(
-                    conf.path_postproc_dir, "predictions", "test.dataset", category, pair_name
-                ),
+                "output_path": prediction_output_dir(conf.path_postproc_dir, category, pair_name, staged_categories),
                 "variables": [var_input],
                 "reference_nc_lists": {
                     var_input: os.path.join(

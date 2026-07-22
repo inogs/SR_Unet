@@ -50,7 +50,7 @@ def analytics_category_name(group, category):
     return category
 
 
-def list_source_files(conf, split_label, group, category, input_subdir, names_input, names_target, var_target, pair_name):
+def list_source_files(conf, split_label, group, category, input_subdir, names_input, names_target, var_target, pair_name, stage=None):
     if group == "input":
         list_path = os.path.join(
             conf.path_preproc_dir, "splits", split_label, "input", input_subdir, f"{names_input}.test.txt"
@@ -64,7 +64,8 @@ def list_source_files(conf, split_label, group, category, input_subdir, names_in
         return read_file_list(list_path)
 
     predictions_dir = os.path.join(
-        conf.path_postproc_dir, "predictions", "test.dataset", category, pair_name, var_target
+        conf.path_postproc_dir, "predictions", "test.dataset", category,
+        *filter(None, [stage]), pair_name, var_target
     )
     return sorted(glob.glob(os.path.join(predictions_dir, "*.nc")))
 
@@ -99,24 +100,105 @@ def execute_command(cmd, log_file_path, label):
     return False
 
 
+def process_pair_analytics(conf, mt_conf, paths, split_label, jobs, group, category, stage,
+                            input_subdir, var_input, names_input, names_target, var_target, pair_name, analytics_category):
+    (split_months_path, split_seasons_path, compute_monthly_stats_path,
+     compute_season_stat_field_path, path_conf_dir, path_log_dir) = paths
+    statistics = vars(mt_conf.statistics)
+
+    variable_name = var_input if group == "input" else var_target
+    label_base = f"{group}.{category}.{pair_name}" if stage is None else f"{group}.{category}.{stage}.{pair_name}"
+
+    files = list_source_files(
+        conf, split_label, group, category, input_subdir, names_input, names_target, var_target, pair_name, stage
+    )
+    if not files:
+        print(f"Warning: no source files found, skipping: {label_base}")
+        return
+
+    file_list_dir = os.path.join(
+        conf.path_postproc_dir, "file.list", "test.dataset", group, analytics_category, *filter(None, [stage])
+    )
+    analytics_dir = os.path.join(
+        conf.path_postproc_dir, "analytics", "test.dataset", group, analytics_category, *filter(None, [stage])
+    )
+
+    flat_list_path = os.path.join(file_list_dir, f"{pair_name}.txt")
+    write_file_list(flat_list_path, files)
+
+    if statistics.get("monthly", False):
+        # split into months
+        conf_split_months = {
+            "input_path": flat_list_path,
+            "output_path": file_list_dir,
+            "output_folder_name": os.path.join("montly", pair_name),
+        }
+        conf_path = os.path.join(path_conf_dir, f"conf.split_months.{label_base}.json")
+        write_conf(conf_path, conf_split_months)
+        log_file_path = os.path.join(path_log_dir, f"split_months_{label_base}.log")
+        execute_command(["python", split_months_path, "--config", conf_path], log_file_path, f"split_months for {label_base}")
+
+        # monthly stats
+        conf_compute_monthly_stats = {
+            "input_path": os.path.join(file_list_dir, "montly", pair_name),
+            "output_path": analytics_dir,
+            "output_folder_name": os.path.join("montly", pair_name),
+            "variable": variable_name,
+            "jobs": jobs,
+        }
+        conf_path = os.path.join(path_conf_dir, f"conf.compute_monthly_stats.{label_base}.json")
+        write_conf(conf_path, conf_compute_monthly_stats)
+        log_file_path = os.path.join(path_log_dir, f"compute_monthly_stats_{label_base}.log")
+        execute_command(["python", compute_monthly_stats_path, "--config", conf_path], log_file_path, f"compute_monthly_stats for {label_base}")
+
+    if statistics.get("seasonal", False):
+        # split into seasons
+        conf_split_seasons = {
+            "input_path": flat_list_path,
+            "output_path": file_list_dir,
+            "output_folder_name": os.path.join("seasonal", pair_name),
+        }
+        conf_path = os.path.join(path_conf_dir, f"conf.split_seasons.{label_base}.json")
+        write_conf(conf_path, conf_split_seasons)
+        log_file_path = os.path.join(path_log_dir, f"split_seasons_{label_base}.log")
+        execute_command(["python", split_seasons_path, "--config", conf_path], log_file_path, f"split_seasons for {label_base}")
+
+        # seasonal stat fields
+        conf_compute_season_stat_field = {
+            "input_path": os.path.join(file_list_dir, "seasonal", pair_name),
+            "output_path": analytics_dir,
+            "output_folder_name": os.path.join("seasonal", pair_name),
+            "variable": variable_name,
+            "jobs": jobs,
+        }
+        conf_path = os.path.join(path_conf_dir, f"conf.compute_season_stat_field.{label_base}.json")
+        write_conf(conf_path, conf_compute_season_stat_field)
+        log_file_path = os.path.join(path_log_dir, f"compute_season_stat_field_{label_base}.log")
+        execute_command(["python", compute_season_stat_field_path, "--config", conf_path], log_file_path, f"compute_season_stat_field for {label_base}")
+
+
 def run_analytics(conf):
     mt_conf = conf.multithread_operations
     split_label = conf.split_label
     jobs = mt_conf.number_of_jobs
     groups = vars(mt_conf.groups)
-    statistics = vars(mt_conf.statistics)
     scripts = vars(mt_conf.scripts)
+    staged_categories = vars(conf.mpi_operations.categories)
 
     training_structure_path = resolve_postproc_path(mt_conf.training_structure_path)
-    split_months_path = resolve_postproc_path(scripts["split_months"])
-    split_seasons_path = resolve_postproc_path(scripts["split_seasons"])
-    compute_monthly_stats_path = resolve_postproc_path(scripts["compute_monthly_stats"])
-    compute_season_stat_field_path = resolve_postproc_path(scripts["compute_season_stat_field"])
-
     path_conf_dir = os.path.join(conf.path_postproc_dir, "conf.files")
     path_log_dir = os.path.join(conf.path_postproc_dir, "log")
     os.makedirs(path_conf_dir, exist_ok=True)
     os.makedirs(path_log_dir, exist_ok=True)
+
+    paths = (
+        resolve_postproc_path(scripts["split_months"]),
+        resolve_postproc_path(scripts["split_seasons"]),
+        resolve_postproc_path(scripts["compute_monthly_stats"]),
+        resolve_postproc_path(scripts["compute_season_stat_field"]),
+        path_conf_dir,
+        path_log_dir,
+    )
 
     for category, variables_key, suffixed, _ in read_data_type_specs(training_structure_path):
         variables = vars(getattr(conf, variables_key))
@@ -131,72 +213,19 @@ def run_analytics(conf):
                 if not group_enabled:
                     continue
 
-                variable_name = var_input if group == "input" else var_target
                 analytics_category = analytics_category_name(group, category)
-                label_base = f"{group}.{category}.{pair_name}"
 
-                files = list_source_files(
-                    conf, split_label, group, category, input_subdir, names_input, names_target, var_target, pair_name
-                )
-                if not files:
-                    print(f"Warning: no source files found, skipping: {label_base}")
-                    continue
+                if group == "predictions" and category in staged_categories:
+                    conversion_type = vars(staged_categories[category])["conversion_type"]
+                    stages = ["raw", f"treshold.{conversion_type}"]
+                else:
+                    stages = [None]
 
-                file_list_dir = os.path.join(conf.path_postproc_dir, "file.list", "test.dataset", group, analytics_category)
-                analytics_dir = os.path.join(conf.path_postproc_dir, "analytics", "test.dataset", group, analytics_category)
-
-                flat_list_path = os.path.join(file_list_dir, f"{pair_name}.txt")
-                write_file_list(flat_list_path, files)
-
-                if statistics.get("monthly", False):
-                    # split into months
-                    conf_split_months = {
-                        "input_path": flat_list_path,
-                        "output_path": file_list_dir,
-                        "output_folder_name": os.path.join("montly", pair_name),
-                    }
-                    conf_path = os.path.join(path_conf_dir, f"conf.split_months.{label_base}.json")
-                    write_conf(conf_path, conf_split_months)
-                    log_file_path = os.path.join(path_log_dir, f"split_months_{label_base}.log")
-                    execute_command(["python", split_months_path, "--config", conf_path], log_file_path, f"split_months for {label_base}")
-
-                    # monthly stats
-                    conf_compute_monthly_stats = {
-                        "input_path": os.path.join(file_list_dir, "montly", pair_name),
-                        "output_path": analytics_dir,
-                        "output_folder_name": os.path.join("montly", pair_name),
-                        "variable": variable_name,
-                        "jobs": jobs,
-                    }
-                    conf_path = os.path.join(path_conf_dir, f"conf.compute_monthly_stats.{label_base}.json")
-                    write_conf(conf_path, conf_compute_monthly_stats)
-                    log_file_path = os.path.join(path_log_dir, f"compute_monthly_stats_{label_base}.log")
-                    execute_command(["python", compute_monthly_stats_path, "--config", conf_path], log_file_path, f"compute_monthly_stats for {label_base}")
-
-                if statistics.get("seasonal", False):
-                    # split into seasons
-                    conf_split_seasons = {
-                        "input_path": flat_list_path,
-                        "output_path": file_list_dir,
-                        "output_folder_name": os.path.join("seasonal", pair_name),
-                    }
-                    conf_path = os.path.join(path_conf_dir, f"conf.split_seasons.{label_base}.json")
-                    write_conf(conf_path, conf_split_seasons)
-                    log_file_path = os.path.join(path_log_dir, f"split_seasons_{label_base}.log")
-                    execute_command(["python", split_seasons_path, "--config", conf_path], log_file_path, f"split_seasons for {label_base}")
-
-                    # seasonal stat fields
-                    conf_compute_season_stat_field = {
-                        "input_path": os.path.join(file_list_dir, "seasonal", pair_name),
-                        "output_path": analytics_dir,
-                        "output_folder_name": os.path.join("seasonal", pair_name),
-                        "variable": variable_name,
-                        "jobs": jobs,
-                    }
-                    conf_path = os.path.join(path_conf_dir, f"conf.compute_season_stat_field.{label_base}.json")
-                    write_conf(conf_path, conf_compute_season_stat_field)
-                    log_file_path = os.path.join(path_log_dir, f"compute_season_stat_field_{label_base}.log")
-                    execute_command(["python", compute_season_stat_field_path, "--config", conf_path], log_file_path, f"compute_season_stat_field for {label_base}")
+                for stage in stages:
+                    process_pair_analytics(
+                        conf, mt_conf, paths, split_label, jobs, group, category, stage,
+                        input_subdir, var_input, names_input, names_target, var_target, pair_name, analytics_category
+                    )
 
 
 if __name__ == "__main__":

@@ -33,3 +33,7 @@ def read_gpu_operations_conf(path):
 
 def read_multithread_operations_conf(path):
     return read_json_conf(path)
+
+
+def read_mpi_operations_conf(path):
+    return read_json_conf(path)

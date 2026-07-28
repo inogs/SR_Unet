@@ -1,7 +1,8 @@
 import torch
+import os
 from torch import nn
 import pytorch_lightning as pl
-from models.convolutional.losses_bkp import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse, masked_mse, masked_rmse_exp_log
+from models.convolutional.losses_bkp import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse, masked_mse, masked_rmse_exp_log, masked_rmse_log 
 from models.convolutional.networks import UNet3D_MCD
 
 
@@ -10,7 +11,7 @@ class ConvModel(pl.LightningModule):
         Loss function can be either rmse, mse, perceptual.
         The number of channels must consider just the variables (i.e., not the river channel)
     '''
-    def __init__(self, main_net, n_dimensions, riv_net=False, loss='rmse', num_channels=1, riv_in_dim=None, riv_out_dim=None, lr=1e-3, stats=None, log_transform = False):
+    def __init__(self, main_net, n_dimensions, riv_net=False, loss='rmse', num_channels=1, riv_in_dim=None, riv_out_dim=None, lr=1e-3, stats=None, log_transform = False, threshold = None, output_path = None):
         super(ConvModel, self).__init__()
 
         self.save_hyperparameters()
@@ -41,6 +42,8 @@ class ConvModel(pl.LightningModule):
         self.lr = lr
         self.stats = stats
         self.log_transform = log_transform
+        self.threshold = threshold
+        self.output_path = output_path
 
     def forward(self, x, riv=None, riv_mask=None):
         x = self.main_net(x, riv)
@@ -135,9 +138,14 @@ class ConvModel(pl.LightningModule):
 
 
     def on_test_start(self):
+        from models.convolutional.losses_bkp import mins, counts
+        mins.clear()
+        counts.clear()
+
         self.test_rmse_values = []
         self.test_mse_values = [] 
         self.test_ssim_values = []
+        self.test_rmse_log_values = []
         if self.log_transform:
             self.test_exp_rmse = []
 
@@ -166,11 +174,15 @@ class ConvModel(pl.LightningModule):
 
         if self.stats is not None:
             rmse_score = masked_rmse(pred, y, mask, self.stats)
+            rmse_log_scores = masked_rmse_log(pred = pred, gt = y, mask = mask, stat = self.stats, threshold = self.threshold)
             # MODIFICA PER AGGIUNGERE CALCOLO SD
             self.test_rmse_values.append(rmse_score.detach())
-
             self.log('test_rmse', rmse_score, sync_dist=True) # defoult on_epoch=True -> il valore finale è la media delle rmse per ogni batch, batch che nel test è formato da un solo campione
-
+            
+            if not self.log_transform:
+                self.test_rmse_log_values.append(rmse_log_scores.detach())
+                self.log('test_rmse_log', rmse_log_scores, sync_dist=True)
+            
             if self.log_transform:
                 rmse_score_on_exp = masked_rmse_exp_log(pred, y, mask, self.stats)
                 self.test_exp_rmse.append(rmse_score_on_exp.detach())
@@ -181,8 +193,33 @@ class ConvModel(pl.LightningModule):
 
     def on_test_epoch_end(self):
         self.log("test_rmse_std", torch.stack(self.test_rmse_values).std(), sync_dist=True)
+        
+        if not self.log_transform:
+            self.log("test_rmse_log_std", torch.stack(self.test_rmse_log_values).std(), sync_dist=True)
+        
         if self.log_transform:
             self.log("test_exp_rmse_std", torch.stack(self.test_exp_rmse).std(), sync_dist=True)
+        
         self.log("test_ssim_std", torch.stack(self.test_ssim_values).std(), sync_dist=True)
         self.log("test_mse_std", torch.stack(self.test_mse_values).std(), sync_dist=True)
+
+
+        from models.convolutional.losses_bkp import mins, counts
+        import json
+        
+        file_path = os.path.join(self.output_path, "mins_counts.json")
+
+        self.print("OUTPUT PATH:", self.output_path)
+        self.print("FILE JSON:", os.path.join(self.output_path, "mins_counts.json"))
+
+        with open(file_path, "w") as f:
+            json.dump(
+                {
+                    "mins": mins,
+                    "counts": counts
+                },
+                f,
+                indent=4
+            )
+
 

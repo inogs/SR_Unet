@@ -7,7 +7,6 @@ import os
 import shutil
 from pathlib import Path
 
-
 sys.path.insert(0, "./..")
 from utils.data_module import ICDataModule
 from models.convolutional.conv_model import ConvModel
@@ -39,10 +38,10 @@ class obj(object):
         return self._len_d
 
 
-def test(data_module:ICDataModule, conf:obj, output_path:str, weight_path:str, stat=None, log_transform = False): #  n_var=None,loss=None, 
+def test(data_module:ICDataModule, conf:obj, output_path:str, weight_path:str, stat=None, log_transform = False, threshold = None): #  n_var=None,loss=None, 
 
 
-    model = ConvModel.load_from_checkpoint(weight_path, stats=stat, log_transform = log_transform)
+    model = ConvModel.load_from_checkpoint(weight_path, stats=stat, log_transform = log_transform, threshold = threshold, output_path = output_path)
 
     trainer = pl.Trainer()
 
@@ -52,6 +51,8 @@ def test(data_module:ICDataModule, conf:obj, output_path:str, weight_path:str, s
     ordered_keys = [
     "test_rmse",
     "test_rmse_std",
+    "test_rmse_log",
+    "test_rmse_log_std",
     "test_rmse_on_exp_pred_log",
     "test_exp_rmse_std",
     "test_mse",
@@ -90,6 +91,8 @@ def test(data_module:ICDataModule, conf:obj, output_path:str, weight_path:str, s
     #     for key, value in results[0].items():
     #         f.write(f"{key:<20} {value}\n")
 
+    print(results)
+
 
 def main():
 
@@ -118,6 +121,8 @@ def main():
     output_path = conf.output_path
 
     stat_path = conf.stat_path
+
+    threshold = conf.threshold
 
     test_file = os.path.basename(test_path)
     var = ".".join(test_file.split(".")[:2])
@@ -166,7 +171,8 @@ def main():
         output_path=output_path,
         weight_path=weight_path,
         stat=stat,
-        log_transform = log_transform
+        log_transform = log_transform,
+        threshold = threshold
     )
 
     print(f"[testing for variable '{os.path.basename(test_path)}'] Ending execution")

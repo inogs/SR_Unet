@@ -2,20 +2,23 @@
 {
     "n_var": 1,
     "river_flag": false,
+    "log_transform": false, 
     "seed": 0,
     "main_net": "unet",
     "n_gpus": 1,
-    "log_transform": true, 
-    "output_path": "/leonardo_scratch/large/userexternal/adelsavi/metriche_test_no_fiumi/prova_sd",
-    "var_test_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/pt.files/no3.log.N3n.log.test.pt",
-    "river_test_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/rivers/pt.files/rivers_test.pt",
+    "output_path": "/leonardo_scratch/large/userexternal/adelsavi/metriche_test_threshold/no_river/dati_no_log",
+    "var_test_path": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/01.preproc/splits/split.develop/pt.files/treshold.po4.N1p.test.dataset.pt",
+    "river_test_path": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/01.preproc/splits/split.develop/pt.files/rivers_test.pt",
     "resume_training": false,
-    "stat_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/input/stat/converted.variables/stat.no3.log.train.txt",
-    "resume_checkpoint_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST_2/06.30.test.dir.MID/no3.log.N3n.log/out1/best_conv_model_unet_mse_no3.log.N3n.log.train.ckpt",
+    "stat_path": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/01.preproc/splits/split.develop/stat.input/treshold/stat.po4.train.txt",
+    "resume_checkpoint_path": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/02.training/no_river_net/treshold/po4.N1p/out/best_conv_model_unet_mse_treshold.po4.N1p.train.dataset.ckpt",
     
     "training": {
         "loss": "mse"
     },
+
+    "threshold": 0.00001,
+
     
     "test": {
         "devices": 1,

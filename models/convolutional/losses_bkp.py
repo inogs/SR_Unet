@@ -37,6 +37,9 @@ def masked_rmse(pred, gt, mask, stat=None):
     masked_y = (gt[~mask] * stat[1]) + stat[0]
     return torch.sqrt(torch.mean((masked_pred - masked_y) ** 2))
 
+def masked_mse(pred, gt, mask):
+    return torch.mean((pred[~mask] - gt[~mask]) ** 2)
+
 # MODIFICA 
 # RMSE SU EXP(PRED CALCOLATI SU DATI LOG)
 def masked_rmse_exp_log(pred, gt, mask, stat=None):
@@ -46,8 +49,7 @@ def masked_rmse_exp_log(pred, gt, mask, stat=None):
     masked_y_exp =torch.exp(gt[~mask] * stat[1] + stat[0])
     return torch.sqrt(torch.mean((masked_pred_exp - masked_y_exp) ** 2))
 
-def masked_mse(pred, gt, mask):
-    return torch.mean((pred[~mask] - gt[~mask]) ** 2)
+
 
 # RMSE SU LOG(PRED CALCOLATI SU DATI NO-LOG + THRESHOLD)
 # Liste globali
@@ -84,8 +86,6 @@ def masked_rmse_log(pred, gt, mask, stat=None, threshold = None):
 
 ##################
 
-def masked_mse(pred, gt, mask):
-    return torch.mean((pred[~mask] - gt[~mask]) ** 2)
     
 
 

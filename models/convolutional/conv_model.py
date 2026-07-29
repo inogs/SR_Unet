@@ -4,6 +4,8 @@ from torch import nn
 import pytorch_lightning as pl
 from models.convolutional.losses_bkp import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse, masked_mse, masked_rmse_exp_log, masked_rmse_log 
 from models.convolutional.networks import UNet3D_MCD
+from models.convolutional.losses_bkp import mins, counts
+import json
 
 
 class ConvModel(pl.LightningModule):
@@ -177,35 +179,38 @@ class ConvModel(pl.LightningModule):
             rmse_log_scores = masked_rmse_log(pred = pred, gt = y, mask = mask, stat = self.stats, threshold = self.threshold)
             # MODIFICA PER AGGIUNGERE CALCOLO SD
             self.test_rmse_values.append(rmse_score.detach())
-            self.log('test_rmse', rmse_score, sync_dist=True) # defoult on_epoch=True -> il valore finale è la media delle rmse per ogni batch, batch che nel test è formato da un solo campione
+           #  self.log('test_rmse', rmse_score, sync_dist=True) # defoult on_epoch=True -> il valore finale è la media delle rmse per ogni batch, batch che nel test è formato da un solo campione
             
             if not self.log_transform:
                 self.test_rmse_log_values.append(rmse_log_scores.detach())
-                self.log('test_rmse_log', rmse_log_scores, sync_dist=True)
+                # self.log('test_rmse_log', rmse_log_scores, sync_dist=True)
             
             if self.log_transform:
                 rmse_score_on_exp = masked_rmse_exp_log(pred, y, mask, self.stats)
-                self.test_exp_rmse.append(rmse_score_on_exp.detach())
-                self.log('test_rmse_on_exp_pred_log', rmse_score_on_exp, sync_dist=True)
+                self.test_exp_rmse_values.append(rmse_score_on_exp.detach())
+                # self.log('test_rmse_on_exp_pred_log', rmse_score_on_exp, sync_dist=True)
         # self.log('test_psnr', psnr_score, sync_dist=True)
-        self.log('test_ssim', ssim_score, sync_dist=True)
-        self.log('test_mse', mse_score, sync_dist=True)
+        # self.log('test_ssim', ssim_score, sync_dist=True)
+        # self.log('test_mse', mse_score, sync_dist=True)
 
     def on_test_epoch_end(self):
+        rmse_global = torch.sqrt(torch.mean(torch.stack(self.test_rmse_values) ** 2))
+        self.log("test_rmse", rmse_global, sync_dist=True)
         self.log("test_rmse_std", torch.stack(self.test_rmse_values).std(), sync_dist=True)
+
         
         if not self.log_transform:
+            rmse_log_global = torch.sqrt(torch.mean(torch.stack(self.test_rmse_log_values) ** 2))
+            self.log("test_rmse_log", rmse_log_global, sync_dist = True)
             self.log("test_rmse_log_std", torch.stack(self.test_rmse_log_values).std(), sync_dist=True)
         
         if self.log_transform:
-            self.log("test_exp_rmse_std", torch.stack(self.test_exp_rmse).std(), sync_dist=True)
+            test_exp_rmse_global = torch.sqrt(torch.mean(torch.stack(self.test_exp_rmse_values) ** 2))
+            self.log("test_exp_rmse", test_exp_rmse_global, sync_dist = True)
+            self.log("test_exp_rmse_std", torch.stack(self.test_exp_rmse_values).std(), sync_dist=True)
         
         self.log("test_ssim_std", torch.stack(self.test_ssim_values).std(), sync_dist=True)
         self.log("test_mse_std", torch.stack(self.test_mse_values).std(), sync_dist=True)
-
-
-        from models.convolutional.losses_bkp import mins, counts
-        import json
         
         file_path = os.path.join(self.output_path, "mins_counts.json")
 

@@ -149,7 +149,7 @@ class ConvModel(pl.LightningModule):
         self.test_ssim_values = []
         self.test_rmse_log_values = []
         if self.log_transform:
-            self.test_exp_rmse = []
+            self.test_exp_rmse_values  = []
 
     def test_step(self, test_batch, batch_idx):
 
@@ -171,6 +171,8 @@ class ConvModel(pl.LightningModule):
         ssim_score = masked_ssim(pred, y, mask)
         mse_score = masked_mse(pred, y, mask)
 
+
+        # APPEND FUNZIONA SOLO SE LAVORO SU 1 GPU E NON SU DDP/MULTI GPU !!!!
         self.test_mse_values.append(mse_score.detach())
         self.test_ssim_values.append(ssim_score.detach())
 
@@ -190,28 +192,43 @@ class ConvModel(pl.LightningModule):
                 self.test_exp_rmse_values.append(rmse_score_on_exp.detach())
                 # self.log('test_rmse_on_exp_pred_log', rmse_score_on_exp, sync_dist=True)
         # self.log('test_psnr', psnr_score, sync_dist=True)
-        # self.log('test_ssim', ssim_score, sync_dist=True)
-        # self.log('test_mse', mse_score, sync_dist=True)
+        self.log('test_ssim', ssim_score, sync_dist=True)
+        self.log('test_mse', mse_score, sync_dist=True)
 
     def on_test_epoch_end(self):
-        rmse_global = torch.sqrt(torch.mean(torch.stack(self.test_rmse_values) ** 2))
+
+        # rmse
+        rmse_values = torch.stack(self.test_rmse_values)
+        rmse_global = torch.sqrt(torch.mean(rmse_values ** 2))
+
         self.log("test_rmse", rmse_global, sync_dist=True)
-        self.log("test_rmse_std", torch.stack(self.test_rmse_values).std(), sync_dist=True)
+        self.log("test_rmse_std", rmse_values.std(), sync_dist=True)
 
         
+        # rmse(log(pred))
         if not self.log_transform:
-            rmse_log_global = torch.sqrt(torch.mean(torch.stack(self.test_rmse_log_values) ** 2))
+            rmse_log_values = torch.stack(self.test_rmse_log_values)
+            rmse_log_global = torch.sqrt(torch.mean(rmse_log_values ** 2))
+
             self.log("test_rmse_log", rmse_log_global, sync_dist = True)
-            self.log("test_rmse_log_std", torch.stack(self.test_rmse_log_values).std(), sync_dist=True)
+            self.log("test_rmse_log_std", rmse_log_values.std(), sync_dist=True)
         
+        # exp(rmse(pred_log))
         if self.log_transform:
-            test_exp_rmse_global = torch.sqrt(torch.mean(torch.stack(self.test_exp_rmse_values) ** 2))
+            exp_rmse_values = torch.stack(self.test_exp_rmse_values)
+            test_exp_rmse_global = torch.sqrt(torch.mean(exp_rmse_values ** 2))
+
             self.log("test_exp_rmse", test_exp_rmse_global, sync_dist = True)
-            self.log("test_exp_rmse_std", torch.stack(self.test_exp_rmse_values).std(), sync_dist=True)
+            self.log("test_exp_rmse_std", exp_rmse_values.std(), sync_dist=True)
         
+        # ssim and mse
         self.log("test_ssim_std", torch.stack(self.test_ssim_values).std(), sync_dist=True)
-        self.log("test_mse_std", torch.stack(self.test_mse_values).std(), sync_dist=True)
         
+        mse_values = torch.stack(self.test_mse_values)
+        self.log("test_mse_mean", mse_values.mean(), sync_dist=True)
+        self.log("test_mse_std", mse_values.std(), sync_dist=True)
+
+        # valori minori uguali di zero
         file_path = os.path.join(self.output_path, "mins_counts.json")
 
         self.print("OUTPUT PATH:", self.output_path)

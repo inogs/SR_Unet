@@ -56,6 +56,7 @@ def test(data_module:ICDataModule, conf:obj, output_path:str, weight_path:str, s
     "test_rmse_on_exp_pred_log",
     "test_exp_rmse_std",
     "test_mse",
+    "test_mse_mean",
     "test_mse_std",
     "test_ssim",
     "test_ssim_std",
@@ -91,7 +92,7 @@ def test(data_module:ICDataModule, conf:obj, output_path:str, weight_path:str, s
     #     for key, value in results[0].items():
     #         f.write(f"{key:<20} {value}\n")
 
-    print(results)
+    # print(results)
 
 
 def main():
@@ -122,10 +123,14 @@ def main():
 
     stat_path = conf.stat_path
 
-    threshold = conf.threshold
-
     test_file = os.path.basename(test_path)
     var = ".".join(test_file.split(".")[:2])
+
+
+    # NB che questa threshold viene usata solo per il calcolo della rmse[log(dati+T))]
+    _, var_t = var.split(".", 1)
+    threshold = getattr(conf.thresholds, var_t, None)
+    #     threshold = getattr(conf.thresholds, var_t)
 
     output_path = os.path.join(
         conf.output_path,
@@ -162,6 +167,7 @@ def main():
         f"\n[testing for variable '{os.path.basename(test_path)}'] \t-- loss = {loss}"
         f"\n[testing for variable '{os.path.basename(test_path)}'] \t-- river_info = {riv}"
         f"\n[testing for variable '{os.path.basename(test_path)}'] \t-- log_info = {log_transform}"
+        f"\n[testing for variable '{os.path.basename(test_path)}'] \t-- threshold = {threshold}"
         f"\n[testing for dataset '{os.path.basename(test_path)}'] %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
     )
 

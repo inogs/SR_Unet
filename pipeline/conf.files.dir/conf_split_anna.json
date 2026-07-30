@@ -1,0 +1,11 @@
+{
+    "data_path": "/leonardo_scratch/large/userexternal/adelsavi/preproc/data.input/original/chl",
+    "output_path": "/leonardo_scratch/large/userexternal/adelsavi/split_prova/random",
+    "split_method": "random",
+    "train_years": 9,
+    
+    "label": "chl",
+    "test_size": 0.2,
+    "validation_size": 0.1,
+    "seed": 42
+}

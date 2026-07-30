@@ -1,0 +1,22 @@
+{
+    "title": "Comparison of RMSE with and without river for temperature and salinity",
+    "ylabel": "RMSE",
+    "xlabel": "Experiments",
+    "color": "teal",
+    "color2": "maroon",
+    "output_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_metrics/07.29.26/rmse_comparison.T.S.png",
+
+    "labels": [
+        "Salinity: pred",
+        "Salinity: pred + R",
+        "Temperature: pred",
+        "Temperature: pred + R"
+    ],
+
+    "values": [
+        0.1969,
+        0.1814,
+        0.3404,
+        0.3395
+    ]
+}

@@ -1,0 +1,36 @@
+{
+    "title": "Comparison of RMSE on log space for no3",
+    "ylabel": "RMSE",
+    "xlabel": "Experiments",
+    "color": "firebrick",
+    "color2": "red",
+    "output_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_metrics/07.29.26/rmse_log_space.no3.png",
+
+    "labels": [
+        "pred(log)",
+        "pred(log) + R",
+        "pred(log + T)",
+        "pred(log + T) + R",
+        "log(pred + T)",
+        "log(pred + T) + R"
+    ],
+
+    "values_chl": [
+        0.2026,
+        0.2101,
+        0.1941,
+        0.1877,
+        1.1407,
+        1.1245
+    ],
+
+    "values_no3": [
+        0.2863,
+        0.2838,
+        0.2401,
+        0.2386,
+        0.2142,
+        0.2095
+
+    ]
+}

@@ -1,0 +1,35 @@
+{
+    "title": "Comparison of RMSE on original space for chl",
+    "ylabel": "RMSE",
+    "xlabel": "Experiments",
+    "color": "steelblue",
+    "color2": "blue",
+    "output_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_metrics/07.29.26/rmse_original_space.chl.png",
+
+    "labels": [
+        "pred",
+        "pred + R",
+        "exp(pred(log))",
+        "exp(pred(log)) + R",
+        "exp(pred(log + T))",
+        "exp(pred(log + T)) + R"
+    ],
+
+    "values_no3": [
+        0.8513,
+        0.7782,
+        0.4089,
+        0.3930,
+        0.4593,
+        0.4357
+    ],
+
+    "values_chl": [
+        0.0683,
+        0.0631,
+        0.0541,
+        0.0546,
+        0.0503,
+        0.0501
+    ]
+}

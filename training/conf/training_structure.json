@@ -1,0 +1,24 @@
+{
+    "tree": {
+        "original": {
+            "variables_key": "variables",
+            "suffixed": false,
+            "pt_prefix": ""
+        },
+        "converted": {
+            "variables_key": "conversion_variables",
+            "suffixed": true,
+            "pt_prefix": ""
+        },
+        "treshold": {
+            "variables_key": "treshold_variables",
+            "suffixed": false,
+            "pt_prefix": "treshold."
+        },
+        "treshold.converted": {
+            "variables_key": "treshold_variables",
+            "suffixed": true,
+            "pt_prefix": "treshold."
+        }
+    }
+}

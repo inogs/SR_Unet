@@ -45,7 +45,7 @@
         "number_of_processes": 32,
         "thresholds": {
             "Chla": 0.00001,
-            "N1p": 0.001,
+            "N1p": 0.00001,
             "N3n": 0.001
         },
         "categories": {

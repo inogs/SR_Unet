@@ -1,10 +1,10 @@
 {
-    "title": "Comparison of RMSE on original space for chl",
+    "title": "Comparison of RMSE on original space for po4",
     "ylabel": "RMSE",
     "xlabel": "Experiments",
     "color": "steelblue",
     "color2": "blue",
-    "output_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_metrics/07.29.26/rmse_original_space.chl.png",
+    "output_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_metrics/07.29.26/plot_rmse/rmse_original_space.po4.png",
 
     "labels": [
         "pred",
@@ -13,6 +13,15 @@
         "exp(pred(log)) + R",
         "exp(pred(log + T))",
         "exp(pred(log + T)) + R"
+    ],
+
+    "values_po4": [
+        0.00785,
+        0.00801,
+        0.00795,
+        0.00794,
+        0.00854,
+        0.00852
     ],
 
     "values_no3": [

@@ -9,10 +9,10 @@ def read_conf(conf_path):
 
 def main():
 
-    conf = read_conf("conf_rmse_hist_blue.json")
+    conf = read_conf("conf_rmse_hist_red.json")
 
     labels = conf["labels"]
-    values = conf["values_chl"]
+    values = conf["values_po4"]
 
     if len(labels) != len(values):
         raise ValueError("labels and values must have the same length")
@@ -22,8 +22,8 @@ def main():
     colors = [conf["color"]] * len(labels)
 
     # cambio colore solo di alcune barre
-    # colors[2] = conf["color2"]
-    # colors[3] = conf["color2"]
+    colors[2] = conf["color2"]
+    colors[3] = conf["color2"]
 
     colors[4] = conf["color2"]
     colors[5] = conf["color2"]

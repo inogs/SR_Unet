@@ -6,12 +6,12 @@
     "seed": 0,
     "main_net": "unet",
     "n_gpus": 1,
-    "output_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_metrics/07.29.26/river_net/converted",
-    "var_test_path": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/01.preproc/splits/split.develop/pt.files/po4.log.N1p.log.test.dataset.pt",
+    "output_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_metrics/07.29.26/river_net/threshold.converted",
+    "var_test_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_preproc_po4/splits/split.develop/pt.files/treshold.po4.log.N1p.log.test.dataset.pt",
     "river_test_path": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/01.preproc/splits/split.develop/pt.files/rivers_test.pt",
     "resume_training": false,
-    "stat_path": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/01.preproc/splits/split.develop/stat.input/converted/stat.po4.log.train.txt",
-    "resume_checkpoint_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/05.28.test.dir.LONGER/po4.log.N1p.log/out1/best_model_po4.log.N1p.log_93.200.ckpt",
+    "stat_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_preproc_po4/splits/split.develop/stat.input/treshold.converted/stat.po4.log.train.txt",
+    "resume_checkpoint_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_training/07.29.26/02.training/river_net/treshold.converted/po4.log.N1p.log/out/best_conv_model_unet_mse_treshold.po4.log.N1p.log.train.dataset.ckpt",
     
     "training": {
         "loss": "mse"

@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+from pathlib import Path
 
 
 # (data_type, variables_key, suffix_both_with_conversion_type, pt_file_prefix)
@@ -80,6 +81,90 @@ def build_train_conf(train_template, path_pt_dir, pt_basename, out_dir):
             path_pt_dir, f"rivers_{pt_type}.pt"
         )
 
+    # Path del file TXT usato per costruire il train dataset
+    # /.../split.develop/pt.files
+    #          ↓ un livello indietro
+    # /.../split.develop
+    split_dir = os.path.dirname(path_pt_dir)
+
+    # Directory finale di output, ad esempio:
+    # .../converted/chl.log.Chla.log/out
+    output_parts = Path(out_dir).parts
+
+    # Tipo di preprocessing: interpolated / treshold / converted /
+    # treshold.converted
+    preprocessing_type = output_parts[-3]
+
+    # Nome della variabile: chl.log.Chla.log
+    variable_name = output_parts[-2]
+
+    # La variabile base è sempre la prima parte
+    # chl.log.Chla.log -> chl
+    variable = variable_name.split(".")[0]
+
+    # Nome del TXT
+    # if preprocessing_type in ["original", "interpolated", "treshold"]:
+    #     txt_name = f"{variable}.train.txt"
+
+    # elif preprocessing_type in ["converted", "treshold.converted"]:
+    #     # chl.log.Chla.log -> chl.log
+    #     converted_variable = ".".join(variable_name.split(".")[:2])
+    #     txt_name = f"{converted_variable}.train.txt"
+
+    # else:
+    #     raise ValueError(
+    #         f"Unknown preprocessing type '{preprocessing_type}' "
+    #         f"in output path: {out_dir}"
+    #     )
+
+    # train_conf["train_files_txt"] = os.path.join(
+    #     split_dir,
+    #     "input",
+    #     preprocessing_type,
+    #     txt_name
+    # )
+
+    # Nome dei TXT input e target
+    parts = variable_name.split(".")
+
+    if preprocessing_type in ["original", "interpolated", "treshold"]:
+
+        # es: chl.Chla
+        input_variable = parts[0]
+        target_variable = parts[1]
+
+        input_txt_name = f"{input_variable}.train.txt"
+        target_txt_name = f"{target_variable}.train.txt"
+
+    elif preprocessing_type in ["converted", "treshold.converted"]:
+
+        # es: chl.log.Chla.log
+        input_variable = ".".join(parts[:2])      # chl.log
+        target_variable = ".".join(parts[2:4])   # Chla.log
+
+        input_txt_name = f"{input_variable}.train.txt"
+        target_txt_name = f"{target_variable}.train.txt"
+
+    else:
+        raise ValueError(
+            f"Unknown preprocessing type '{preprocessing_type}' "
+            f"in output path: {out_dir}"
+        )
+
+    train_conf["train_files_txt"] = os.path.join(
+        split_dir,
+        "input",
+        preprocessing_type,
+        input_txt_name
+    )
+
+    train_conf["target_files_txt"] = os.path.join(
+        split_dir,
+        "target",
+        preprocessing_type,
+        target_txt_name
+    )
+    
     return train_conf
 
 
@@ -91,7 +176,7 @@ def build_debug_qos_line(debug_conf):
 
 
 def build_job_script(job_conf, out_dir, conf_json_path):
-    train_script_path = os.path.join(job_conf["path_source_dir"], "train_prod.py")
+    train_script_path = os.path.join(job_conf["path_source_dir"], "cv_train_prod.py")
 
     return JOB_TEMPLATE.format(
         nodes=job_conf["nodes"],

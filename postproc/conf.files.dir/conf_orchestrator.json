@@ -3,7 +3,7 @@
         "steps": [
             {
                 "name": "create_structure",
-                "enabled": true,
+                "enabled": false,
                 "script": "create_structure.py"
             },
             {
@@ -23,26 +23,26 @@
             }
         ]
     },
-    "path_preproc_dir": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/01.preproc",
-    "path_training_dir": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/02.training/river_net",
-    "path_postproc_dir": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/03.postproc/river_net",
+    "path_preproc_dir": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_copy_Iscra_work/07.17.26/01.preproc",
+    "path_training_dir": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_copy_Iscra_work/07.17.26/02.training/river_net",
+    "path_postproc_dir": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_copy_Iscra_work/07.17.26/03.postproc/river_net",
     "split_label": "split.develop",
     "conversion_type": "log",
     "gpu_operations": {
         "training_structure_path": "../training/conf/training_structure.json",
-        "produce_predictions_path": "../produce_predictions_prod.py",
+        "produce_predictions_path": "/leonardo/home/userexternal/adelsavi/git/codice_fede/produce_predictions_prod.py",
         "river_flag": true,
         "n_devices": 1,
         "batch_size": 4,
         "mask_threshold": 1000000.0,
         "device": "auto",
         "seed": 0
-    },
+    }, 
     "mpi_operations": {
         "training_structure_path": "../training/conf/training_structure.json",
         "apply_treshold_path": "apply_treshold_mpi.py",
         "converter_path": "../pipeline/converter_mpi.py",
-        "number_of_processes": 32,
+        "number_of_processes": 48,
         "thresholds": {
             "Chla": 0.00001,
             "N1p": 0.00001,
@@ -79,7 +79,7 @@
         "groups": {
             "input": true,
             "target": true,
-            "predictions": false
+            "predictions": true
         },
         "statistics": {
             "monthly": true,
@@ -87,6 +87,7 @@
         }
     },
     "variables": {
+
         "chl": "Chla",
         "no3": "N3n",
         "po4": "N1p",
@@ -97,10 +98,23 @@
         "chl": "Chla",
         "no3": "N3n",
         "po4": "N1p"
-    },
+        },
+
     "treshold_variables": {
         "chl": "Chla",
         "no3": "N3n",
+        "po4": "N1p"
+    },
+
+    "variables1": {
+        "po4": "N1p"
+    },
+    "conversion_variables1": {
+
+        "po4": "N1p"
+    },
+    "treshold_variables1": {
+
         "po4": "N1p"
     }
 }

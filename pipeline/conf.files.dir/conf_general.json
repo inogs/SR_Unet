@@ -3,7 +3,7 @@
         "steps": [
             {
                 "name": "create_structure",
-                "enabled": true,
+                "enabled": false,
                 "script": "create_structure.py",
                 "config": "conf.files.dir/preproc_structure.json"
             },
@@ -14,7 +14,7 @@
             },
             {
                 "name": "multithread_operations",
-                "enabled": false,
+                "enabled": true,
                 "script": "multithread_operations.py"
             }
         ]
@@ -22,21 +22,24 @@
     "path_target_dir": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/NARF.cleanup",
     "path_input_dir": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC",
     "path_rivers_dir": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/rivers/rivers",
-    "path_preproc_dir": "/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/pipeline/OPA_HOME_TEST",
+    "path_preproc_dir": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_preproc_cv",
     "conversion_type": "log",
     "mpi_operations": {
-        "number_of_processes": 1,
-        "interp_flag": false,
-        "conversion_flag": false,
-        "treshold_flag": false,
+        "number_of_processes": 32,
+        "interp_flag": true,
+        "conversion_flag": true,
+        "treshold_flag": true,
         "treshold_conversion_flag": true
     },
     "multithread_operations": {
-        "number_of_threads": 1,
-        "split_flag": true,
+        "number_of_threads": 32,
+        "split_flag": false,
         "compute_statistics_flag": false,
         "compute_pt_flag": true
     },
+    "variables1": {
+        "po4": "N1p"
+    },    
     "variables": {
         "chl": "Chla",
         "no3": "N3n",
@@ -44,9 +47,15 @@
         "so": "S",
         "thetao": "T"
     },
+    "conversion_variables1": {
+        "po4": "N1p"
+    },
     "conversion_variables": {
         "chl": "Chla",
         "no3": "N3n",
+        "po4": "N1p"
+    },
+    "treshold_variables1": {
         "po4": "N1p"
     },
     "treshold_variables": {
@@ -56,14 +65,16 @@
     },
     "thresholds": {
         "Chla": 0.00001,
-        "N1p": 0.001,
+        "N1p": 0.00001,
         "N3n": 0.001,
         "chl": 0.00001,
         "no3": 0.001,
-        "po4": 0.001
+        "po4": 0.00001
     },
     "split": {
         "label": "split.develop",
+        "split_method": "temporal",
+        "train_years": 10,
         "test_size": 0.2,
         "validation_size": 0.1,
         "seed": 42

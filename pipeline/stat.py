@@ -124,6 +124,63 @@ def combine_equal_mask(mus, vars_):
 
     return mu_tot, sigma
 
+def compute_all_file_stats(files, variable, jobs):
+    """
+    Calcola UNA VOLTA mean e variance di ogni NetCDF.
+    Restituisce due array con una posizione per file.
+    """
+
+    if jobs == 1:
+        stats = [
+            file_stats(f, variable)
+            for f in files
+        ]
+    else:
+        with Manager() as manager:
+            counter = manager.Value("i", 0)
+            lock = manager.Lock()
+
+            with ProcessPoolExecutor(
+                max_workers=jobs,
+                initializer=init_worker_id,
+                initargs=(counter, lock),
+            ) as ex:
+
+                stats = list(
+                    ex.map(
+                        file_stats_logged,
+                        files,
+                        [variable] * len(files)
+                    )
+                )
+
+    mus = np.array(
+        [s[0] for s in stats],
+        dtype=np.float64
+    )
+
+    vars_ = np.array(
+        [s[1] for s in stats],
+        dtype=np.float64
+    )
+
+    return mus, vars_
+
+
+def compute_stats_from_cached_files(mus, vars_, indices):
+    """
+    Combina SOLO le statistiche dei file appartenenti
+    al training fold.
+    """
+
+    fold_mus = mus[indices]
+    fold_vars = vars_[indices]
+
+    return combine_equal_mask(
+        fold_mus,
+        fold_vars
+    )
+
 
 def compute_list_stats(txt_path, variable, jobs):
     t0 = time.time()

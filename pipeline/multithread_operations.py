@@ -54,7 +54,7 @@ def run_split_layer(conf):
     os.makedirs(os.path.join(conf.path_preproc_dir, "splits", split_label, "pt.files"), exist_ok=True)
 
     path_conf_dir = os.path.join(conf.path_preproc_dir, "conf.files")
-    split_script_path = os.path.join(os.path.dirname(__file__), "split.py")
+    split_script_path = os.path.join(os.path.dirname(__file__), "split_anna.py")
     path_log_dir = os.path.join(conf.path_preproc_dir, "log")
     path_split_input_interpolated_dir = os.path.join(conf.path_preproc_dir, "splits", split_label, "input", "interpolated")
     path_split_input_converted_dir = os.path.join(conf.path_preproc_dir, "splits", split_label, "input", "converted")
@@ -86,8 +86,10 @@ def run_split_layer(conf):
             "data_path": os.path.join(path_interpolated_input_dir, var_input),
             "output_path": path_split_input_interpolated_dir,
             "label": var_input,
+            "split_method": conf.split.split_method,
             "test_size": conf.split.test_size,
             "validation_size": conf.split.validation_size,
+            "train_years": conf.split.train_years,
             "seed": conf.split.seed,
         }
 
@@ -107,8 +109,10 @@ def run_split_layer(conf):
             "data_path": os.path.join(path_original_target_dir, var_target),
             "output_path": path_split_target_original_dir,
             "label": var_target,
+            "split_method": conf.split.split_method,
             "test_size": conf.split.test_size,
             "validation_size": conf.split.validation_size,
+            "train_years": conf.split.train_years,
             "seed": conf.split.seed,
         }
 
@@ -139,8 +143,10 @@ def run_split_layer(conf):
             "data_path": os.path.join(path_converted_input_dir, converted_var_input),
             "output_path": path_split_input_converted_dir,
             "label": converted_var_input,
+            "split_method": conf.split.split_method,
             "test_size": conf.split.test_size,
             "validation_size": conf.split.validation_size,
+            "train_years": conf.split.train_years,
             "seed": conf.split.seed,
         }
 
@@ -160,8 +166,10 @@ def run_split_layer(conf):
             "data_path": os.path.join(path_converted_target_dir, converted_var_target),
             "output_path": path_split_target_converted_dir,
             "label": converted_var_target,
+            "split_method": conf.split.split_method,
             "test_size": conf.split.test_size,
             "validation_size": conf.split.validation_size,
+            "train_years": conf.split.train_years,
             "seed": conf.split.seed,
         }
 
@@ -189,8 +197,10 @@ def run_split_layer(conf):
             "data_path": os.path.join(path_treshold_input_dir, var_input),
             "output_path": path_split_input_treshold_dir,
             "label": var_input,
+            "split_method": conf.split.split_method,
             "test_size": conf.split.test_size,
             "validation_size": conf.split.validation_size,
+            "train_years": conf.split.train_years,
             "seed": conf.split.seed,
         }
 
@@ -210,8 +220,10 @@ def run_split_layer(conf):
             "data_path": os.path.join(path_treshold_target_dir, var_target),
             "output_path": path_split_target_treshold_dir,
             "label": var_target,
+            "split_method": conf.split.split_method,
             "test_size": conf.split.test_size,
             "validation_size": conf.split.validation_size,
+            "train_years": conf.split.train_years,
             "seed": conf.split.seed,
         }
 
@@ -242,8 +254,10 @@ def run_split_layer(conf):
             "data_path": os.path.join(path_treshold_converted_input_dir, converted_var_input),
             "output_path": path_split_input_treshold_converted_dir,
             "label": converted_var_input,
+            "split_method": conf.split.split_method,
             "test_size": conf.split.test_size,
             "validation_size": conf.split.validation_size,
+            "train_years": conf.split.train_years,
             "seed": conf.split.seed,
         }
 
@@ -263,8 +277,10 @@ def run_split_layer(conf):
             "data_path": os.path.join(path_treshold_converted_target_dir, converted_var_target),
             "output_path": path_split_target_treshold_converted_dir,
             "label": converted_var_target,
+            "split_method": conf.split.split_method,
             "test_size": conf.split.test_size,
             "validation_size": conf.split.validation_size,
+            "train_years": conf.split.train_years,
             "seed": conf.split.seed,
         }
 
@@ -285,8 +301,10 @@ def run_split_layer(conf):
         "data_path": path_rivers_dir,
         "output_path": path_split_rivers_dir,
         "label": "rivers",
+        "split_method": conf.split.split_method,
         "test_size": conf.split.test_size,
         "validation_size": conf.split.validation_size,
+        "train_years": conf.split.train_years,
         "seed": conf.split.seed,
     }
 

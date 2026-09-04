@@ -1,7 +1,7 @@
 {
     "general": {
-        "path_preproc_dir": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/01.preproc",
-        "path_training_dir": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/02.training/no_river_net",
+        "path_preproc_dir": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_preproc_cv",
+        "path_training_dir": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_training_cv/08.24.26/no_river_net",
         "split_label": "split.develop",
         "conversion_type": "log",
         "variables": {
@@ -41,6 +41,7 @@
             "val": false,
             "test": false
         },
+        "n_folds":5,
         "training": {
             "loss": "mse",
             "lr": 0.001,
@@ -57,13 +58,13 @@
         "ntasks_per_node": 4,
         "gres": "gpu:4",
         "cpus_per_task": 8,
-        "time": "03:00:00",
-        "account": "OGS23_PRACE_IT_0",
+        "time": "05:00:00",
+        "account": "IscrC_IC-MLbgc",
         "partition": "boost_usr_prod",
         "job_name": "Unet.Train",
-        "conda_base_path": "/leonardo/home/userexternal/gzuccari/conda_test/miniforge3",
+        "conda_base_path": "/leonardo/home/userexternal/adelsavi/conda_test/miniforge3",
         "conda_env": "torch_test",
-        "path_source_dir": "/leonardo_work/IscrC_IC-MLbgc/git/SR_Unet",
+        "path_source_dir": "/leonardo/home/userexternal/adelsavi/git/codice_fede",
         "debug": {
             "enabled": false,
             "qos": "boost_qos_dbg"

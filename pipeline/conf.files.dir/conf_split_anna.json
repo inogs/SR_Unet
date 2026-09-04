@@ -1,0 +1,10 @@
+{
+    "data_path": "/leonardo_scratch/large/userexternal/gzuccari/ARCHIVE/AdriaticNC/chl",
+    "output_path": "/leonardo/home/userexternal/gzuccari/git/OGS/SR_Unet/pipeline/output_test_forlder",
+    "label": "chl",
+    "split_method": "temporal",
+    "train_years": 12,
+    "test_size": 0.2,
+    "validation_size": 0.1,
+    "seed": 42
+}

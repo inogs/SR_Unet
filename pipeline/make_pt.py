@@ -56,8 +56,8 @@ def validate_conf(conf):
     required_path_fields = [
         "path_target",
         "path_input",
-        "stat_target",
-        "stat_input",
+        # "stat_target",
+        # "stat_input",
     ]
     required_fields = required_path_fields + [
         "var_target",
@@ -76,7 +76,7 @@ def validate_conf(conf):
         if not isinstance(field_value, str) or not field_value.strip():
             raise ValueError(f"Configuration field must be a non-empty path string: {field_name}")
 
-    for path in [conf.path_target, conf.path_input, conf.stat_target, conf.stat_input]:
+    for path in [conf.path_target, conf.path_input]: # conf.stat_target, conf.stat_input
         if not os.path.exists(path):
             print(f"Error: the path {path} does not exist")
             sys.exit(1)
@@ -150,13 +150,33 @@ if __name__== "__main__":
     print(f"    Container shape", storage_target.shape)
 
     # section, load statistics
-    mean_target, std_target = read_stats_file(conf.stat_target)
-    print(f"    Mean of target variable: {mean_target}")
-    print(f"    Std of target variable: {std_target}")
+    # mean_target, std_target = read_stats_file(conf.stat_target)
+    # print(f"    Mean of target variable: {mean_target}")
+    # print(f"    Std of target variable: {std_target}")
 
-    mean_input, std_input = read_stats_file(conf.stat_input)
-    print(f"    Mean of input variable: {mean_input}")
-    print(f"    Std of input variable: {std_input}")
+    # mean_input, std_input = read_stats_file(conf.stat_input)
+    # print(f"    Mean of input variable: {mean_input}")
+    # print(f"    Std of input variable: {std_input}")
+
+    if os.path.isfile(conf.stat_target):
+        mean_target, std_target = read_stats_file(conf.stat_target)
+        print(f"    Target statistics found:")
+        print(f"        Mean = {mean_target}")
+        print(f"        Std  = {std_target}")
+    else:
+        mean_target = 0.0
+        std_target = 1.0
+        print("    Target statistics not found -> no normalization")
+
+    if os.path.isfile(conf.stat_input):
+        mean_input, std_input = read_stats_file(conf.stat_input)
+        print(f"    Input statistics found:")
+        print(f"        Mean = {mean_input}")
+        print(f"        Std  = {std_input}")
+    else:
+        mean_input = 0.0
+        std_input = 1.0
+        print("    Input statistics not found -> no normalization")
 
     # section, fill storages
     start_time = time.time()

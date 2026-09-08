@@ -1,33 +1,41 @@
+
 {
     "n_var": 1,
-    "n_riv": 19,
     "river_flag": true,
+    "log_transform": true, 
     "seed": 0,
     "main_net": "unet",
-    "data_dim": {
-        "height": 300,
-        "width": 494,
-        "depth": 27
-    },
     "n_gpus": 1,
-    "output_path": "/leonardo_scratch/large/userexternal/adelsavi/metriche_test",
-    "var_train_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/pt.files/no3.N3n.train.dataset.pt",
-    "var_val_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/pt.files/no3.N3n.val.dataset.pt",
-    "var_test_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/pt.files/no3.N3n.test.dataset.pt",
-    "river_train_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/rivers/pt.files/rivers_train.pt",
-    "river_val_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/rivers/pt.files/rivers_val.pt",
-    "river_test_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/rivers/pt.files/rivers_test.pt",
+    "output_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_metrics/07.29.26/river_net/threshold.converted",
+    "var_test_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_preproc_po4/splits/split.develop/pt.files/treshold.po4.log.N1p.log.test.dataset.pt",
+    "river_test_path": "/leonardo_work/IscrC_IC-MLbgc/work/07.17.26/01.preproc/splits/split.develop/pt.files/rivers_test.pt",
     "resume_training": false,
-    "stat_path": "/leonardo_scratch/large/userexternal/gzuccari/OPA_HOME/input/stat/original.variables/stat.no3.train.txt",
-    "resume_checkpoint_path": "/leonardo_scratch/large/userexternal/gzuccari/TEST/05.28.test.dir.LONGER/no3.N3n/out2/best_model_no3.N3n_98.199.ckpt",
+    "stat_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_preproc_po4/splits/split.develop/stat.input/treshold.converted/stat.po4.log.train.txt",
+    "resume_checkpoint_path": "/leonardo_scratch/large/userexternal/adelsavi/SRUnet_training/07.29.26/02.training/river_net/treshold.converted/po4.log.N1p.log/out/best_conv_model_unet_mse_treshold.po4.log.N1p.log.train.dataset.ckpt",
+    
     "training": {
-        "loss": "mse",
-        "lr": 0.001,
-        "max_epochs": 2,
-        "precision": "bf16-mixed",
-        "patience": 10,
-        "train_batch_size": 4,
-        "val_batch_size": 4,
-        "accumulate_grad_batches": 1
+        "loss": "mse"
+    },
+
+    "thresholds": {
+        "Chla": 0.00001,
+        "N1p": 0.00001,
+        "N3n": 0.001,
+        "chl": 0.00001,
+        "no3": 0.001,
+        "po4": 0.00001
+    },
+
+    
+    "test": {
+        "devices": 1,
+        "num_workers": 8,
+        "pin_memory": true,
+        "batch_size": 1,
+        "shuffle": false,
+        "logger": false,
+        "enable_checkpointing": false,
+        "debug_first_batch": true,
+        "psnr_data_range": 1.0
     }
 }

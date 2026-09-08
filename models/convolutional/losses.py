@@ -2,23 +2,32 @@ import torch
 from torch import nn
 import torchvision
 from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio
+import logging
+
 
 from utils.train_utils import calc_psnr
 
 accelerator = "cuda" if torch.cuda.is_available() else "cpu"
 
+
+# QUESTA METRICA QUI E' MEGLIO CHE ABBIA COME DATA RANGE IL RANGE DEI VALORI DEL TRAIN -> nel codcie che calocola e salva mean e sd di train/test/val aggiungere MIN-MAX
 def masked_psnr(pred, gt, mask):
     masked_pred = pred[~mask]
     masked_y = gt[~mask]
     # psnr = PeakSignalNoiseRatio().to(accelerator)
-    psnr = PeakSignalNoiseRatio(data_range=(masked_y.max() - masked_y.min())).to(pred.device)
+    psnr = PeakSignalNoiseRatio(data_range=1).to(pred.device)
     #return calc_psnr(masked_pred, masked_y)
     return psnr(masked_pred, masked_y)
+####################################
 
 def masked_ssim(pred, gt, mask):
-    pred[mask] = 0
-    gt[mask] = 0
-    ssim = StructuralSimilarityIndexMeasure().to(accelerator)
+    # MODIFICA
+    # pred[mask] = 0
+    # gt[mask] = 0
+    pred = pred.masked_fill(mask, 0)
+    gt = gt.masked_fill(mask, 0)
+    ###
+    ssim = StructuralSimilarityIndexMeasure().to(pred.device)
     return ssim(pred, gt)
 
 def masked_rmse(pred, gt, mask, stat=None):
@@ -27,6 +36,58 @@ def masked_rmse(pred, gt, mask, stat=None):
     masked_pred = (pred[~mask] * stat[1]) + stat[0]
     masked_y = (gt[~mask] * stat[1]) + stat[0]
     return torch.sqrt(torch.mean((masked_pred - masked_y) ** 2))
+
+def masked_mse(pred, gt, mask):
+    return torch.mean((pred[~mask] - gt[~mask]) ** 2)
+
+# MODIFICA 
+# RMSE SU EXP(PRED CALCOLATI SU DATI LOG)
+def masked_rmse_exp_log(pred, gt, mask, stat=None):
+    if stat is None:
+        stat = [0, 1]
+    masked_pred_exp = torch.exp(pred[~mask] * stat[1] + stat[0])
+    masked_y_exp =torch.exp(gt[~mask] * stat[1] + stat[0])
+    return torch.sqrt(torch.mean((masked_pred_exp - masked_y_exp) ** 2))
+
+
+
+# RMSE SU LOG(PRED CALCOLATI SU DATI NO-LOG + THRESHOLD)
+# Liste globali
+mins = []
+counts = []
+
+def masked_rmse_log(pred, gt, mask, stat=None, threshold = None):
+    if stat is None:
+        stat = [0, 1]
+
+    pred = pred.clone()
+    gt = gt.clone()
+
+    # 1. denormalizzo
+    pred[~mask] = pred[~mask] * stat[1] + stat[0]
+    gt[~mask] = gt[~mask] * stat[1] + stat[0]
+
+    # 2. guardo che valori minimi ho e quanti valori negativi o zero ho nelle previsioni
+    mins.append(pred[~mask].min().item())
+    counts.append((pred[~mask] <= 0).sum().item())
+
+    # applico threshold prima di applicare il log in modo da evitare nan --> SOLO SE SO CHE CI SONO VALORI NEGATIVI??
+    if threshold is not None:
+        gt[~mask] = torch.clamp(gt[~mask], min=threshold)
+        pred[~mask] = torch.clamp(pred[~mask], min=threshold)
+
+    # trasformo in log
+    masked_pred_log = torch.log(pred[~mask])
+    masked_y_log = torch.log(gt[~mask])   
+    # print(torch.sqrt(torch.mean((masked_pred_log - masked_y_log) ** 2))) 
+
+    # calcolo l'rmse 
+    return torch.sqrt(torch.mean((masked_pred_log - masked_y_log) ** 2))
+
+##################
+
+    
+
 
 #to try both as a penalty and by itself
 class WeightedRMSELoss(nn.Module):
@@ -127,8 +188,12 @@ class VGGPerceptualLoss(torch.nn.Module):
         self.register_buffer("resize", resize)
 
     def forward(self, input, target, mask):
-        input[mask]=0
-        target[mask]=0
+        # MODIFICA
+        # input[mask]=0
+        # target[mask]=0
+        input = input.masked_fill(mask, 0)
+        target = target.masked_fill(mask, 0)
+        #####
         channel_losses = []
         for i in range(input.shape[1]):
             loss = self.channel_loss_fn(i, input, target, self.blocks, self.resize, self.transform)

@@ -1,8 +1,11 @@
 import torch
+import os
 from torch import nn
 import pytorch_lightning as pl
-from models.convolutional.losses_bkp import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse, masked_rmse_relative
+from models.convolutional.losses_bkp import Masked_MSELoss, Masked_RMSELoss, VGGPerceptualLoss, masked_psnr, masked_ssim, masked_rmse, masked_mse, masked_rmse_exp_log, masked_rmse_log 
 from models.convolutional.networks import UNet3D_MCD
+from models.convolutional.losses_bkp import mins, counts
+import json
 
 
 class ConvModel(pl.LightningModule):
@@ -10,7 +13,7 @@ class ConvModel(pl.LightningModule):
         Loss function can be either rmse, mse, perceptual.
         The number of channels must consider just the variables (i.e., not the river channel)
     '''
-    def __init__(self, main_net, n_dimensions, riv_net=False, loss='rmse', num_channels=1, riv_in_dim=None, riv_out_dim=None, lr=1e-3, stats=None):
+    def __init__(self, main_net, n_dimensions, riv_net=False, loss='rmse', num_channels=1, riv_in_dim=None, riv_out_dim=None, lr=1e-3, stats=None, log_transform = False, threshold = None, output_path = None):
         super(ConvModel, self).__init__()
 
         self.save_hyperparameters()
@@ -40,6 +43,9 @@ class ConvModel(pl.LightningModule):
         self.n_dimensions = n_dimensions
         self.lr = lr
         self.stats = stats
+        self.log_transform = log_transform
+        self.threshold = threshold
+        self.output_path = output_path
 
     def forward(self, x, riv=None, riv_mask=None):
         x = self.main_net(x, riv)
@@ -119,18 +125,31 @@ class ConvModel(pl.LightningModule):
             pred = self.forward(x)
 
         loss = self.loss(pred, y, mask)
-        psnr_score = masked_psnr(pred, y, mask)
+        # psnr_score = masked_psnr(pred, y, mask)
         #MODIFICA
         self.log('val_loss', loss,
                  on_step=False,
                  on_epoch=True,
                  prog_bar=True,
                  sync_dist=True)
-        self.log('val_psnr', psnr_score,
-                 on_step=False,
-                 on_epoch=True,
-                 prog_bar =True,
-                 sync_dist=True)
+        # self.log('val_psnr', psnr_score,
+        #          on_step=False,
+        #          on_epoch=True,
+        #          prog_bar =True,
+        #          sync_dist=True)
+
+
+    def on_test_start(self):
+        from models.convolutional.losses_bkp import mins, counts
+        mins.clear()
+        counts.clear()
+
+        self.test_rmse_values = []
+        self.test_mse_values = [] 
+        self.test_ssim_values = []
+        self.test_rmse_log_values = []
+        if self.log_transform:
+            self.test_exp_rmse_values  = []
 
     def test_step(self, test_batch, batch_idx):
 
@@ -148,14 +167,81 @@ class ConvModel(pl.LightningModule):
         else:
             pred = self.forward(x)
 
-        loss = self.loss(pred, y, mask)
-        psnr_score = masked_psnr(pred, y, mask)
+        # psnr_score = masked_psnr(pred, y, mask)
         ssim_score = masked_ssim(pred, y, mask)
+        mse_score = masked_mse(pred, y, mask)
+
+
+        # APPEND FUNZIONA SOLO SE LAVORO SU 1 GPU E NON SU DDP/MULTI GPU !!!!
+        self.test_mse_values.append(mse_score.detach())
+        self.test_ssim_values.append(ssim_score.detach())
+
         if self.stats is not None:
             rmse_score = masked_rmse(pred, y, mask, self.stats)
-            r_rmse_score = masked_rmse_relative(pred, y, mask, self.stats)
-            self.log('test_rmse', rmse_score, sync_dist=True)
-            self.log('test_relative_rmse', r_rmse_score, sync_dist=True)
-        self.log('test_loss', loss, sync_dist=True)
-        self.log('test_psnr', psnr_score, sync_dist=True)
+            rmse_log_scores = masked_rmse_log(pred = pred, gt = y, mask = mask, stat = self.stats, threshold = self.threshold)
+            # MODIFICA PER AGGIUNGERE CALCOLO SD
+            self.test_rmse_values.append(rmse_score.detach())
+           #  self.log('test_rmse', rmse_score, sync_dist=True) # defoult on_epoch=True -> il valore finale è la media delle rmse per ogni batch, batch che nel test è formato da un solo campione
+            
+            if not self.log_transform:
+                self.test_rmse_log_values.append(rmse_log_scores.detach())
+                # self.log('test_rmse_log', rmse_log_scores, sync_dist=True)
+            
+            if self.log_transform:
+                rmse_score_on_exp = masked_rmse_exp_log(pred, y, mask, self.stats)
+                self.test_exp_rmse_values.append(rmse_score_on_exp.detach())
+                # self.log('test_rmse_on_exp_pred_log', rmse_score_on_exp, sync_dist=True)
+        # self.log('test_psnr', psnr_score, sync_dist=True)
         self.log('test_ssim', ssim_score, sync_dist=True)
+        self.log('test_mse', mse_score, sync_dist=True)
+
+    def on_test_epoch_end(self):
+
+        # rmse
+        rmse_values = torch.stack(self.test_rmse_values)
+        rmse_global = torch.sqrt(torch.mean(rmse_values ** 2))
+
+        self.log("test_rmse", rmse_global, sync_dist=True)
+        self.log("test_rmse_std", rmse_values.std(), sync_dist=True)
+
+        
+        # rmse(log(pred))
+        if not self.log_transform:
+            rmse_log_values = torch.stack(self.test_rmse_log_values)
+            rmse_log_global = torch.sqrt(torch.mean(rmse_log_values ** 2))
+
+            self.log("test_rmse_log", rmse_log_global, sync_dist = True)
+            self.log("test_rmse_log_std", rmse_log_values.std(), sync_dist=True)
+        
+        # exp(rmse(pred_log))
+        if self.log_transform:
+            exp_rmse_values = torch.stack(self.test_exp_rmse_values)
+            test_exp_rmse_global = torch.sqrt(torch.mean(exp_rmse_values ** 2))
+
+            self.log("test_exp_rmse", test_exp_rmse_global, sync_dist = True)
+            self.log("test_exp_rmse_std", exp_rmse_values.std(), sync_dist=True)
+        
+        # ssim and mse
+        self.log("test_ssim_std", torch.stack(self.test_ssim_values).std(), sync_dist=True)
+        
+        mse_values = torch.stack(self.test_mse_values)
+        self.log("test_mse_mean", mse_values.mean(), sync_dist=True)
+        self.log("test_mse_std", mse_values.std(), sync_dist=True)
+
+        # valori minori uguali di zero
+        file_path = os.path.join(self.output_path, "mins_counts.json")
+
+        self.print("OUTPUT PATH:", self.output_path)
+        self.print("FILE JSON:", os.path.join(self.output_path, "mins_counts.json"))
+
+        with open(file_path, "w") as f:
+            json.dump(
+                {
+                    "mins": mins,
+                    "counts": counts
+                },
+                f,
+                indent=4
+            )
+
+

@@ -83,15 +83,16 @@ class ICDataset(Dataset):
     def __len__(self):
         return len(self.ds)
 
+    # MODIFICATO PER CORREZIONE INFO MASCHERA
     def __getitem__(self, idx):
-        x_sample, y_sample = self.ds[idx]
+        x_sample, y_sample, mask_sample = self.ds[idx]
         if self.resize_to_even and (x_sample.shape[-2] % 2 != 0 or x_sample.shape[-1] % 2 != 0):
             x_sample = make_shape_even(x_sample)
             y_sample = make_shape_even(y_sample)
-        if self.rivers != None:
+        if self.rivers is not None:
             river_sample = self.rivers[idx]
-            return x_sample, river_sample, y_sample
-        return x_sample, y_sample
+            return x_sample, river_sample, y_sample, mask_sample
+        return x_sample, y_sample, mask_sample
 
 
 class ICDataModule(pl.LightningDataModule):

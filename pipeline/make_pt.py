@@ -1,3 +1,5 @@
+# a seguito di un errore trovato nel make pt su come viene portata avanti l'informazione della maschera sui dati sono state fatte delle modifiche al codice in data 10 settembre 2026
+
 import netCDF4 as nc
 import torch
 import numpy as np
@@ -101,12 +103,12 @@ def load_slice(index, file_path, variable, mean_value, std_value):
         data_slice = np.zeros(array.shape, dtype=np.result_type(array.dtype, np.float32))
         data_slice[valid_mask] = (array.data[valid_mask] - mean_value) / std_value
 
-    return index, data_slice
+    return index, data_slice, array_mask
 
 
-def fill_storage_parallel(storage, files, variable, mean_value, std_value, label, n_workers):
+def fill_storage_parallel(storage, files, variable, mean_value, std_value, label, n_workers, storage_mask = None):
     with ProcessPoolExecutor(max_workers=n_workers) as executor:
-        for i, data_slice in executor.map(
+        for i, data_slice, mask in executor.map(
             load_slice,
             range(len(files)),
             files,
@@ -117,6 +119,9 @@ def fill_storage_parallel(storage, files, variable, mean_value, std_value, label
         ):
             print(f"    Loaded file {i+1}/{len(files)}: {files[i]}, {label} mask applied")
             storage[i, 0, :, :, :] = data_slice
+            #storiamo anche la maschera
+            if storage_mask is not None:
+                storage_mask[i, 0, :, :, :] = mask
 
 
 if __name__== "__main__":
@@ -145,6 +150,8 @@ if __name__== "__main__":
     print(f"    Shape of the variable {conf.var_target} in the first file: {ds_1.shape}")
     storage_target = np.zeros((n_targets, 1, ds_1.shape[0], ds_1.shape[1], ds_1.shape[2]), dtype=ds_1.dtype)
     storage_input = np.zeros(storage_target.shape, dtype=storage_target.dtype)
+    # MODIFICA: aggiungo lo storage della maschera   
+    storage_mask = np.zeros(storage_target.shape, dtype = np.bool_)
     dataset_1.close()
     del ds_1
     print(f"    Container shape", storage_target.shape)
@@ -180,13 +187,13 @@ if __name__== "__main__":
 
     # section, fill storages
     start_time = time.time()
-    fill_storage_parallel(storage_target, files_list_targets, conf.var_target, mean_target, std_target, "target", conf.n_workers)
-    fill_storage_parallel(storage_input, files_list_inputs, conf.var_input, mean_input, std_input, "input", conf.n_workers)
+    fill_storage_parallel(storage_target, files_list_targets, conf.var_target, mean_target, std_target, "target", conf.n_workers, storage_mask = storage_mask)
+    fill_storage_parallel(storage_input, files_list_inputs, conf.var_input, mean_input, std_input, "input", conf.n_workers, storage_mask = None)
     end_time = time.time()
     print(f"    Time taken to load target and input files: {end_time - start_time} seconds")
 
     print(f"    All files loaded, saving to pytorch format")
-    torch_ds = torch.utils.data.TensorDataset(torch.Tensor(storage_input), torch.Tensor(storage_target))
+    torch_ds = torch.utils.data.TensorDataset(torch.Tensor(storage_input), torch.Tensor(storage_target), torch.BoolTensor(storage_mask))
     print(f"    Dataset shape: {torch_ds.tensors[0].shape}, {torch_ds.tensors[1].shape}")
     os.makedirs(conf.output_path, exist_ok=True)
     torch.save(torch_ds, output_file_path)

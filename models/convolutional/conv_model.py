@@ -73,11 +73,12 @@ class ConvModel(pl.LightningModule):
     def training_step(self, train_batch, batch_idx):
 
         if self.river_net is not None:
-            x, riv, y = train_batch
+            x, riv, y, mask = train_batch
         else:
-            x, y = train_batch
+            x, y, mask = train_batch
 
-        mask = (x > 10e3).detach() # booleano non ha bisogno del .detach()
+        mask = mask.detach()
+        # mask = (x > 10e3).detach() # booleano non ha bisogno del .detach()
         # MODIFICA
         #x[mask] = 0
         x = torch.where(mask, torch.zeros_like(x), x)
@@ -86,7 +87,7 @@ class ConvModel(pl.LightningModule):
 
 
         if self.river_net is not None:
-            riv_mask = mask[:, 0:1, :, :].detach() #extract mask of shape (bs, 1, h, w)
+            riv_mask = mask[:, 0:1, :, :, :].detach() #extract mask of shape (bs, 1, h, w)
             pred = self.forward(x, riv, riv_mask)
         else:
             pred = self.forward(x)
@@ -107,11 +108,11 @@ class ConvModel(pl.LightningModule):
         ############
 
         if self.river_net is not None:
-            x, riv, y = val_batch
+            x, riv, y, mask = val_batch
         else:
-            x, y = val_batch
+            x, y, mask = val_batch
 
-        mask = (x > 10e3)
+        # mask = (x > 10e3)
         # MODIFICA
         # x[mask] = 0 
         x = torch.where(mask, torch.zeros_like(x), x)
@@ -119,7 +120,7 @@ class ConvModel(pl.LightningModule):
 
 
         if self.river_net is not None:
-            riv_mask = mask[:, 0:1, :, :] #extract mask of shape (bs, 1, h, w)
+            riv_mask = mask[:, 0:1, :, :, :] #extract mask of shape (bs, 1, h, w)
             pred = self.forward(x, riv, riv_mask)
         else:
             pred = self.forward(x)
@@ -154,15 +155,15 @@ class ConvModel(pl.LightningModule):
     def test_step(self, test_batch, batch_idx):
 
         if self.river_net is not None:
-            x, riv, y = test_batch
+            x, riv, y, mask = test_batch
         else:
-            x, y = test_batch
+            x, y, mask = test_batch
 
-        mask = (x > 10e3)
+        # mask = (x > 10e3)
         x = torch.where(mask, torch.zeros_like(x), x)
 
         if self.river_net is not None:
-            riv_mask = mask[:, 0:1, :, :] #extract mask of shape (bs, 1, h, w)
+            riv_mask = mask[:, 0:1, :, :, :] #extract mask of shape (bs, 1, h, w)
             pred = self.forward(x, riv, riv_mask)
         else:
             pred = self.forward(x)
@@ -218,7 +219,7 @@ class ConvModel(pl.LightningModule):
             exp_rmse_values = torch.stack(self.test_exp_rmse_values)
             test_exp_rmse_global = torch.sqrt(torch.mean(exp_rmse_values ** 2))
 
-            self.log("test_exp_rmse", test_exp_rmse_global, sync_dist = True)
+            self.log("test_rmse_on_exp_pred_log", test_exp_rmse_global, sync_dist = True)
             self.log("test_exp_rmse_std", exp_rmse_values.std(), sync_dist=True)
         
         # ssim and mse

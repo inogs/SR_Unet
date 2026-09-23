@@ -75,6 +75,7 @@ class ICDataset(Dataset):
     (raw_data, river_data, target_value)
 
     '''
+    print("sto usando il data module corretto in data 11 settembre")
     def __init__(self, tensor_dataset, rivers_dataset=None, resize_to_even = False):
         self.ds = tensor_dataset
         self.rivers = rivers_dataset
@@ -89,9 +90,12 @@ class ICDataset(Dataset):
         if self.resize_to_even and (x_sample.shape[-2] % 2 != 0 or x_sample.shape[-1] % 2 != 0):
             x_sample = make_shape_even(x_sample)
             y_sample = make_shape_even(y_sample)
+            mask_sample = make_shape_even(mask_sample).bool()
+
         if self.rivers is not None:
             river_sample = self.rivers[idx]
             return x_sample, river_sample, y_sample, mask_sample
+        
         return x_sample, y_sample, mask_sample
 
 
@@ -159,11 +163,15 @@ class ICDataModule(pl.LightningDataModule):
             self.test_ds = ICDataset(tensor_dataset=test_ds, rivers_dataset=rivers_ds, resize_to_even=self.resize_to_even)
 
     # commento Anna: in teoria con get_numchannels carico di nuovo tutto il dataset (torch.load) in memoria -> basterebbe aggiungere mmap_mode = 'r'? o contare il numero di var quando si fanno i load dei dataset per training, o quando si costruisce i dataset
+    # def get_numchannels(self):
+    #     test_dataset = torch.load(self.test_path)
+    #     test_ds = ICDataset(tensor_dataset=test_dataset)
+    #     return np.array(test_ds).shape[2]
+    # cambio la funzione in data 21 settembre
     def get_numchannels(self):
         test_dataset = torch.load(self.test_path)
-        test_ds = ICDataset(tensor_dataset=test_dataset)
-        return np.array(test_ds).shape[2]
-
+        x = test_dataset[0][0]
+        return x.shape[0]
 
     def train_dataloader(self):
         # return torch.utils.data.DataLoader(self.train_ds,

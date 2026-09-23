@@ -258,112 +258,451 @@ def validate_conf(conf):
     for field_name, field_value in sorted(vars(conf).items()):
         print(f"    {field_name}: {field_value}")
 
-class MetricsLogger(pl.Callback):
-    def __init__(self):
-        super().__init__()
-        self.train_epochs = []
-        self.train_losses = []
-        self.val_losses = []
-        self.val_psnr = []
+# class MetricsLogger(pl.Callback):
+#     def __init__(self):
+#         super().__init__()
+#         self.train_epochs = []
+#         self.train_losses = []
+#         self.val_losses = []
+#         self.val_psnr = []
 
-    def on_train_epoch_end(self, trainer, pl_module):
-        epoch = trainer.current_epoch
+#     def on_train_epoch_end(self, trainer, pl_module):
+#         epoch = trainer.current_epoch
 
-        metrics = trainer.callback_metrics
-        # print(metrics.keys())
-        train_loss = metrics.get('train_loss')
-        self.train_epochs.append(epoch)
-        if train_loss is not None:
-            self.train_losses.append(train_loss.item())
-            print(f"Epoch {epoch}: train loss = {train_loss:.4f}")
-        else:
-            self.train_losses.append(float('nan'))
+#         metrics = trainer.callback_metrics
+#         # print(metrics.keys())
+#         train_loss = metrics.get('train_loss')
+#         self.train_epochs.append(epoch)
+#         if train_loss is not None:
+#             self.train_losses.append(train_loss.item())
+#             print(f"Epoch {epoch}: train loss = {train_loss:.4f}")
+#         else:
+#             self.train_losses.append(float('nan'))
 
 
-    # def on_validation_epoch_end(self, trainer, pl_module):
-    #     epoch = trainer.current_epoch
+#     # def on_validation_epoch_end(self, trainer, pl_module):
+#     #     epoch = trainer.current_epoch
 
-    #     metrics = trainer.callback_metrics
-    #     # print(metrics.keys())
-    #     val_loss = metrics.get('val_loss')
-    #     val_psnr = metrics.get('val_psnr')
-    #     if val_loss is not None:
-    #         self.val_losses.append(val_loss.item())
-    #     else:
-    #         self.val_losses.append(float('nan'))
+#     #     metrics = trainer.callback_metrics
+#     #     # print(metrics.keys())
+#     #     val_loss = metrics.get('val_loss')
+#     #     val_psnr = metrics.get('val_psnr')
+#     #     if val_loss is not None:
+#     #         self.val_losses.append(val_loss.item())
+#     #     else:
+#     #         self.val_losses.append(float('nan'))
         
-    #     if val_psnr is not None:
-    #         val_psnr = val_psnr.item()
-    #         self.val_psnr.append(val_psnr)
-    #     else:
-    #         val_psnr = float('nan')
-    #         self.val_psnr.append(val_psnr)
+#     #     if val_psnr is not None:
+#     #         val_psnr = val_psnr.item()
+#     #         self.val_psnr.append(val_psnr)
+#     #     else:
+#     #         val_psnr = float('nan')
+#     #         self.val_psnr.append(val_psnr)
         
-    #     print(f"Epoch {epoch}: val loss = {val_loss:.4f}, psnr = {val_psnr:.4f}")
+#     #     print(f"Epoch {epoch}: val loss = {val_loss:.4f}, psnr = {val_psnr:.4f}")
 
-    def on_validation_epoch_end(self, trainer, pl_module):
-        # Ignora la validation eseguita da Lightning
-        # prima del primo training epoch (sanity check) 
-        if trainer.sanity_checking: 
-            return 
-        epoch = trainer.current_epoch 
-        metrics = trainer.callback_metrics 
-        val_loss = metrics.get('val_loss') 
-        val_psnr = metrics.get('val_psnr') 
+#     def on_validation_epoch_end(self, trainer, pl_module):
+#         # Ignora la validation eseguita da Lightning
+#         # prima del primo training epoch (sanity check) 
+#         if trainer.sanity_checking: 
+#             return 
+#         epoch = trainer.current_epoch 
+#         metrics = trainer.callback_metrics 
+#         val_loss = metrics.get('val_loss') 
+#         val_psnr = metrics.get('val_psnr') 
         
-        if val_loss is not None: 
-            val_loss_value = val_loss.item() 
-            self.val_losses.append(val_loss_value) 
-        else: 
-            val_loss_value = float('nan') 
-            self.val_losses.append(val_loss_value) 
+#         if val_loss is not None: 
+#             val_loss_value = val_loss.item() 
+#             self.val_losses.append(val_loss_value) 
+#         else: 
+#             val_loss_value = float('nan') 
+#             self.val_losses.append(val_loss_value) 
         
-        if val_psnr is not None: 
-            val_psnr_value = val_psnr.item() 
-            self.val_psnr.append(val_psnr_value) 
-        else: 
-            val_psnr_value = float('nan') 
-            self.val_psnr.append(val_psnr_value) 
+#         if val_psnr is not None: 
+#             val_psnr_value = val_psnr.item() 
+#             self.val_psnr.append(val_psnr_value) 
+#         else: 
+#             val_psnr_value = float('nan') 
+#             self.val_psnr.append(val_psnr_value) 
         
-        print( 
-            f"Epoch {epoch}: " 
-            f"val loss = {val_loss_value:.4f}, "
-            f"psnr = {val_psnr_value:.4f}" )
+#         print( 
+#             f"Epoch {epoch}: " 
+#             f"val loss = {val_loss_value:.4f}, "
+#             f"psnr = {val_psnr_value:.4f}" )
 
     
+#     def save_txt(self, filepath="loss_log.txt"):
+#         val = list(self.val_losses)
+#         epochs = list(self.train_epochs)
+#         tra = list(self.train_losses)
+#         # togli la prima perchè è la validation iniziale che PyTorch Lightning fa prima di iniziare il training: validation sanity
+#         # if len(val) > len(tra):
+#         #     val = val[1:]
+
+#         with open(filepath, "w") as f:
+#             f.write("epoch\tval_loss\ttrain_loss\n")
+#             for epoch, val_loss, train_loss in zip(epochs, val, tra):
+#                 f.write(f"{epoch}\t{val_loss:.6f}\t{train_loss:.6f}\n")
+
+#     def plot(self, filepath="loss_plot.png"):
+#         val = list(self.val_losses)
+#         epochs = list(self.train_epochs)
+#         tra = list(self.train_losses)
+#         # togli la prima perchè è la validation iniziale che PyTorch Lightning fa prima di iniziare il training: validation sanity
+#         # if len(val) > len(tra):
+#         #     val = val[1:]
+
+#         plt.figure(figsize=(10,5))
+#         plt.plot(epochs, tra, label='Train Loss')
+#         plt.plot(epochs, val, label='Validation Loss')
+#         plt.xlabel("Epochs")
+#         plt.ylabel("Value")
+#         plt.title("Validation and Training Loss trends during Epochs")
+#         plt.legend()
+#         plt.grid(True)
+#         ax = plt.gca()
+#         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+#         plt.savefig(filepath)
+#         plt.close()
+
+class MetricsLogger(pl.Callback):
+
+    def __init__(self):
+        super().__init__()
+
+        self.train_epochs = []
+        self.train_losses = []
+
+        self.val_epochs = []
+        self.val_losses = []
+
+        self.val_rmse = []
+        self.val_rmse_std = []
+
+        self.val_mse = []
+        self.val_mse_std = []
+
+        self.val_ssim = []
+        self.val_ssim_std = []
+
+        self.val_psnr = []
+        self.val_psnr_std = []
+
+        self.val_rmse_log = []
+        self.val_rmse_log_std = []
+
+        self.val_exp_rmse = []
+        self.val_exp_rmse_std = []
+
+
+    def _get_value(self, metrics, name):
+
+        value = metrics.get(name)
+
+        if value is None:
+            return float("nan")
+
+        return value.item()
+
+
+    def on_train_epoch_end(self, trainer, pl_module):
+
+        epoch = trainer.current_epoch
+        metrics = trainer.callback_metrics
+
+        train_loss = self._get_value(
+            metrics,
+            "train_loss"
+        )
+
+        self.train_epochs.append(epoch)
+        self.train_losses.append(train_loss)
+
+        if trainer.is_global_zero:
+            print(
+                f"Epoch {epoch}: "
+                f"train loss = {train_loss:.6f}",
+                flush=True
+            )
+
+
+    def on_validation_end(self, trainer, pl_module):
+
+        # ignoro sanity validation
+        if trainer.sanity_checking:
+            return
+
+        epoch = trainer.current_epoch
+        metrics = trainer.callback_metrics
+
+        val_loss = self._get_value(
+            metrics,
+            "val_loss"
+        )
+
+        val_rmse = self._get_value(
+            metrics,
+            "val_rmse"
+        )
+
+        val_rmse_std = self._get_value(
+            metrics,
+            "val_rmse_std"
+        )
+
+        val_mse = self._get_value(
+            metrics,
+            "val_mse"
+        )
+
+        val_mse_std = self._get_value(
+            metrics,
+            "val_mse_std"
+        )
+
+        val_ssim = self._get_value(
+            metrics,
+            "val_ssim"
+        )
+
+        val_ssim_std = self._get_value(
+            metrics,
+            "val_ssim_std"
+        )
+
+        val_psnr = self._get_value(
+            metrics,
+            "val_psnr"
+        )
+
+        val_psnr_std = self._get_value(
+            metrics,
+            "val_psnr_std"
+        )
+
+        # -------------------------------------------------
+        # salvo sempre liste della stessa lunghezza
+        # -------------------------------------------------
+
+        if not pl_module.log_transform:
+
+            val_rmse_log = self._get_value(
+                metrics,
+                "val_rmse_log"
+            )
+
+            val_rmse_log_std = self._get_value(
+                metrics,
+                "val_rmse_log_std"
+            )
+
+            val_exp_rmse = float("nan")
+            val_exp_rmse_std = float("nan")
+
+        else:
+
+            val_rmse_log = float("nan")
+            val_rmse_log_std = float("nan")
+
+            val_exp_rmse = self._get_value(
+                metrics,
+                "val_rmse_on_exp_pred_log"
+            )
+
+            val_exp_rmse_std = self._get_value(
+                metrics,
+                "val_exp_rmse_std"
+            )
+
+        # -------------------------------------------------
+        # append
+        # -------------------------------------------------
+
+        self.val_epochs.append(epoch)
+        self.val_losses.append(val_loss)
+
+        self.val_rmse.append(val_rmse)
+        self.val_rmse_std.append(val_rmse_std)
+
+        self.val_mse.append(val_mse)
+        self.val_mse_std.append(val_mse_std)
+
+        self.val_ssim.append(val_ssim)
+        self.val_ssim_std.append(val_ssim_std)
+
+        self.val_psnr.append(val_psnr)
+        self.val_psnr_std.append(val_psnr_std)
+
+        self.val_rmse_log.append(val_rmse_log)
+        self.val_rmse_log_std.append(
+            val_rmse_log_std
+        )
+
+        self.val_exp_rmse.append(val_exp_rmse)
+        self.val_exp_rmse_std.append(
+            val_exp_rmse_std
+        )
+
+        # -------------------------------------------------
+        # print solo rank 0
+        # -------------------------------------------------
+
+        if trainer.is_global_zero:
+
+            print(
+                f"\nEpoch {epoch} VALIDATION\n"
+                f"  val_loss = {val_loss:.6f}\n"
+                f"  RMSE     = {val_rmse:.6f} ± {val_rmse_std:.6f}\n"
+                f"  MSE      = {val_mse:.6f} ± {val_mse_std:.6f}\n"
+                f"  SSIM     = {val_ssim:.6f} ± {val_ssim_std:.6f}\n"
+                f"  PSNR     = {val_psnr:.6f} ± {val_psnr_std:.6f}",
+                flush=True
+            )
+
+            if not pl_module.log_transform:
+
+                print(
+                    f"  RMSE(log(pred)) = "
+                    f"{val_rmse_log:.6f} ± "
+                    f"{val_rmse_log_std:.6f}",
+                    flush=True
+                )
+
+            else:
+
+                print(
+                    f"  RMSE(exp(pred_log)) = "
+                    f"{val_exp_rmse:.6f} ± "
+                    f"{val_exp_rmse_std:.6f}",
+                    flush=True
+                )
+
     def save_txt(self, filepath="loss_log.txt"):
-        val = list(self.val_losses)
-        epochs = list(self.train_epochs)
-        tra = list(self.train_losses)
-        # togli la prima perchè è la validation iniziale che PyTorch Lightning fa prima di iniziare il training: validation sanity
-        # if len(val) > len(tra):
-        #     val = val[1:]
+
+        train_by_epoch = dict(
+            zip(
+                self.train_epochs,
+                self.train_losses
+            )
+        )
 
         with open(filepath, "w") as f:
+
             f.write("epoch\tval_loss\ttrain_loss\n")
-            for epoch, val_loss, train_loss in zip(epochs, val, tra):
-                f.write(f"{epoch}\t{val_loss:.6f}\t{train_loss:.6f}\n")
+
+            for epoch, val_loss in zip(
+                self.val_epochs,
+                self.val_losses
+            ):
+
+                train_loss = train_by_epoch.get(
+                    epoch,
+                    float("nan")
+                )
+
+                f.write(
+                    f"{epoch}\t"
+                    f"{val_loss:.6f}\t"
+                    f"{train_loss:.6f}\n"
+                )
+
+    def save_metrics_txt(
+        self,
+        filepath="validation_metrics.txt"
+    ):
+
+        with open(filepath, "w") as f:
+
+            f.write(
+                "epoch\t"
+                "val_loss\t"
+                "rmse\t"
+                "rmse_std\t"
+                "mse\t"
+                "mse_std\t"
+                "ssim\t"
+                "ssim_std\t"
+                "psnr\t"
+                "psnr_std\t"
+                "rmse_log\t"
+                "rmse_log_std\t"
+                "exp_rmse\t"
+                "exp_rmse_std\n"
+            )
+
+            for i, epoch in enumerate(
+                self.val_epochs
+            ):
+
+                f.write(
+                    f"{epoch}\t"
+                    f"{self.val_losses[i]:.8f}\t"
+                    f"{self.val_rmse[i]:.8f}\t"
+                    f"{self.val_rmse_std[i]:.8f}\t"
+                    f"{self.val_mse[i]:.8f}\t"
+                    f"{self.val_mse_std[i]:.8f}\t"
+                    f"{self.val_ssim[i]:.8f}\t"
+                    f"{self.val_ssim_std[i]:.8f}\t"
+                    f"{self.val_psnr[i]:.8f}\t"
+                    f"{self.val_psnr_std[i]:.8f}\t"
+                    f"{self.val_rmse_log[i]:.8f}\t"
+                    f"{self.val_rmse_log_std[i]:.8f}\t"
+                    f"{self.val_exp_rmse[i]:.8f}\t"
+                    f"{self.val_exp_rmse_std[i]:.8f}\n"
+                )
+
 
     def plot(self, filepath="loss_plot.png"):
-        val = list(self.val_losses)
-        epochs = list(self.train_epochs)
-        tra = list(self.train_losses)
-        # togli la prima perchè è la validation iniziale che PyTorch Lightning fa prima di iniziare il training: validation sanity
-        # if len(val) > len(tra):
-        #     val = val[1:]
 
-        plt.figure(figsize=(10,5))
-        plt.plot(epochs, tra, label='Train Loss')
-        plt.plot(epochs, val, label='Validation Loss')
+        train_by_epoch = dict(
+            zip(
+                self.train_epochs,
+                self.train_losses
+            )
+        )
+
+        train_losses = [
+            train_by_epoch.get(
+                epoch,
+                float("nan")
+            )
+            for epoch in self.val_epochs
+        ]
+
+        plt.figure(figsize=(10, 5))
+
+        plt.plot(
+            self.val_epochs,
+            train_losses,
+            label="Train Loss"
+        )
+
+        plt.plot(
+            self.val_epochs,
+            self.val_losses,
+            label="Validation Loss"
+        )
+
         plt.xlabel("Epochs")
         plt.ylabel("Value")
-        plt.title("Validation and Training Loss trends during Epochs")
+
+        plt.title(
+            "Validation and Training Loss "
+            "trends during Epochs"
+        )
+
         plt.legend()
         plt.grid(True)
+
         ax = plt.gca()
-        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+        ax.xaxis.set_major_locator(
+            MaxNLocator(integer=True)
+        )
+
         plt.savefig(filepath)
         plt.close()
+
 
 class obj(object):
     def __init__(self, d):
@@ -427,6 +766,7 @@ def train(data_module:ICDataModule,conf:obj, fold:int, job_id: str):
     os.makedirs(fold_output_path, exist_ok=True)
 
     riv_out_dim = reduce(lambda x, y: x * y, vars(conf.data_dim).values())
+
     model = ConvModel(
                     main_net=conf.main_net,
                     n_dimensions=len(vars(conf.data_dim)),
@@ -435,8 +775,12 @@ def train(data_module:ICDataModule,conf:obj, fold:int, job_id: str):
                     num_channels=conf.n_var,
                     riv_in_dim = conf.n_riv,
                     riv_out_dim = riv_out_dim,
-                    lr = conf.training.lr
-            )
+                    lr = conf.training.lr,
+
+                    log_transform=conf.log_transform,
+                    threshold=conf.threshold,
+                    output_path=fold_output_path
+                            )
 
     print("output in train", riv_out_dim)
     print(vars(conf.data_dim))
@@ -499,41 +843,120 @@ def train(data_module:ICDataModule,conf:obj, fold:int, job_id: str):
         end_epoch,
     )
 
+    metrics_log_path = _build_epoch_range_filepath(
+        os.path.join(
+            fold_output_path,
+            "validation_metrics.txt"
+        ),
+        start_epoch,
+        end_epoch,
+    )
+
     # metrics_logger.save_txt(loss_log_path)
     # metrics_logger.plot(loss_plot_path)
     
 
-    best_epoch = np.argmin(metrics_logger.val_losses)
-    best_val_loss = min(metrics_logger.val_losses)
+    best_idx = int(
+        np.nanargmin(
+            metrics_logger.val_losses
+        )
+    )
+
+    best_epoch = (
+        metrics_logger.val_epochs[best_idx]
+    )
+
+    best_val_loss = (
+        metrics_logger.val_losses[best_idx]
+    )
+
+    train_by_epoch = dict(
+        zip(
+            metrics_logger.train_epochs,
+            metrics_logger.train_losses
+        )
+    )
+
+    fold_metrics = {
+        
+        "best_epoch": best_epoch,
+
+        "best_train_loss": train_by_epoch.get(
+            best_epoch,
+            float("nan")
+        ),
+
+        "best_val_loss":
+            best_val_loss,
+
+        "best_val_rmse":
+            metrics_logger.val_rmse[best_idx],
+
+        "best_val_rmse_std":
+            metrics_logger.val_rmse_std[best_idx],
+
+        "best_val_mse":
+            metrics_logger.val_mse[best_idx],
+
+        "best_val_mse_std":
+            metrics_logger.val_mse_std[best_idx],
+
+        "best_val_ssim":
+            metrics_logger.val_ssim[best_idx],
+
+        "best_val_ssim_std":
+            metrics_logger.val_ssim_std[best_idx],
+
+        "best_val_psnr":
+            metrics_logger.val_psnr[best_idx],
+
+        "best_val_psnr_std":
+            metrics_logger.val_psnr_std[best_idx],
+
+        "best_val_rmse_log":
+            metrics_logger.val_rmse_log[best_idx],
+
+        "best_val_rmse_log_std":
+            metrics_logger.val_rmse_log_std[best_idx],
+
+        "best_val_exp_rmse":
+            metrics_logger.val_exp_rmse[best_idx],
+
+        "best_val_exp_rmse_std":
+            metrics_logger.val_exp_rmse_std[best_idx],
+    }
     
     #  SOLO rank 0 salva i file
     if trainer.is_global_zero:
 
-        metrics_logger.save_txt(loss_log_path)
-        metrics_logger.plot(loss_plot_path)
+        metrics_logger.save_txt(
+            loss_log_path
+        )
 
-        with open(
-            os.path.join(
-                fold_output_path,
-                f"best_metrics_fold{fold}_{job_id}.txt"
-            ),
-            "w"
-        ) as f:
-            f.write(f"best_val_loss\t{best_val_loss:.6f}\n")
-            f.write(f"best_epoch\t{best_epoch}\n")
-    # with open(
-    #     os.path.join(conf.output_path, f"best_metrics_fold{fold}_{job_id}.txt"),
-    #     "w"
-    # ) as f:
-    #     f.write(f"best_val_loss\t{best_val_loss:.6f}\n")
-    #     f.write(f"best_epoch\t{best_epoch}\n")
+        metrics_logger.plot(
+            loss_plot_path
+        )
 
-    return {
-        "best_epoch": best_epoch,
-        "best_train_loss": metrics_logger.train_losses[best_epoch],
-        "best_val_loss": best_val_loss,
-        "best_val_psnr": metrics_logger.val_psnr[best_epoch],
-    }
+        metrics_logger.save_metrics_txt(
+            metrics_log_path
+        )
+
+        best_metrics_path = os.path.join(
+            fold_output_path,
+            f"best_metrics_fold{fold}_{job_id}.txt"
+        )
+
+        with open(best_metrics_path, "w") as f:
+
+            for name, value in fold_metrics.items():
+
+                if name == "best_epoch":
+                    f.write(f"{name}\t{value}\n")
+                else:
+                    f.write(f"{name}\t{value:.8f}\n")
+
+    return fold_metrics
+
 
 @rank_zero_only
 def save_cv_results(cv_results, conf, job_id):
@@ -543,42 +966,108 @@ def save_cv_results(cv_results, conf, job_id):
         f"cv_results_{job_id}.txt"
     )
 
-    all_losses = np.array([
-        metrics["best_val_loss"]
-        for metrics in cv_results.values()
-    ], dtype=float)
-
-    mean_loss = np.mean(all_losses)
-    std_loss = np.std(all_losses)
+    # Metriche di cui voglio calcolare
+    # media e std TRA I FOLD
+    metric_keys = [
+        "best_val_loss",
+        "best_val_rmse",
+        "best_val_mse",
+        "best_val_ssim",
+        "best_val_psnr",
+        "best_val_rmse_log",
+        "best_val_exp_rmse",
+    ]
 
     with open(cv_file, "w") as f:
-        f.write("Cross validation results\n\n")
+
+        f.write("Cross validation results\n")
+        f.write("========================\n\n")
+
+        # =====================================================
+        # RISULTATI DI OGNI FOLD
+        # =====================================================
 
         for fold, metrics in cv_results.items():
 
-            best_val_loss = metrics["best_val_loss"]
-            best_epoch = metrics["best_epoch"]
-
             print(
                 f"{fold}: "
-                f"best val_loss={best_val_loss:.5f}, "
-                f"epoch={best_epoch}"
+                f"best val_loss={metrics['best_val_loss']:.6f}, "
+                f"epoch={metrics['best_epoch']}"
+            )
+
+            f.write(f"{fold}\n")
+            f.write("------------------\n")
+
+            for name, value in metrics.items():
+
+                if name == "best_epoch":
+                    f.write(
+                        f"{name}\t{value}\n"
+                    )
+
+                else:
+                    f.write(
+                        f"{name}\t{value:.8f}\n"
+                    )
+
+            f.write("\n")
+
+        # =====================================================
+        # AGGREGAZIONE TRA I FOLD
+        # =====================================================
+
+        f.write("\nAggregated results\n")
+        f.write("==================\n")
+
+        print("\n===== CROSS VALIDATION SUMMARY =====")
+
+        for metric_name in metric_keys:
+
+            values = np.array(
+                [
+                    metrics.get(
+                        metric_name,
+                        np.nan
+                    )
+                    for metrics in cv_results.values()
+                ],
+                dtype=float
+            )
+
+            # rmse_log oppure exp_rmse possono essere NaN
+            # a seconda del tipo di preprocessing
+            values = values[
+                np.isfinite(values)
+            ]
+
+            # se questa metrica non esiste per questo run,
+            # non la salvo
+            if len(values) == 0:
+                continue
+
+            mean_value = np.mean(values)
+            std_value = np.std(values)
+
+            f.write(
+                f"mean_{metric_name}\t"
+                f"{mean_value:.8f}\n"
             )
 
             f.write(
-                f"{fold}\n"
-                f"best_val_loss\t{best_val_loss:.6f}\n"
-                f"best_epoch\t{best_epoch}\n\n"
+                f"std_{metric_name}\t"
+                f"{std_value:.8f}\n"
             )
 
-        print(f"Mean best val_loss = {mean_loss:.6f}")
-        print(f"Std best val_loss = {std_loss:.6f}")
+            print(
+                f"{metric_name}: "
+                f"{mean_value:.6f} ± "
+                f"{std_value:.6f}"
+            )
 
-        f.write("Aggregated results\n")
-        f.write("==================\n")
-        f.write(f"mean_best_val_loss\t{mean_loss:.6f}\n")
-        f.write(f"std_best_val_loss\t{std_loss:.6f}\n")
-
+    print(
+        f"\nCross validation results saved to: "
+        f"{cv_file}"
+    )
 
 
 
@@ -726,21 +1215,6 @@ if __name__== "__main__":
             val_shuffle=conf.shuffle.val,
             test_shuffle=conf.shuffle.test,
         )
-                # data_module = ICDataModule(
-        #     dataset=train_dataset,
-        #     train_idx=train_idx,
-        #     val_idx=val_idx,
-        #     stats_path=stats_path,
-
-        #     test_path=conf.var_test_path,
-        #     river_test_path=conf.river_test_path if conf.river_flag else None,
-
-        #     train_batch_size=conf.training.train_batch_size,
-        #     val_batch_size=conf.training.val_batch_size,
-        #     train_shuffle=conf.shuffle.train,
-        #     val_shuffle=conf.shuffle.val,
-        #     test_shuffle=conf.shuffle.test,
-        # )
 
         ###### 5. TRAINING DEL FOLD
         # eseguo il training -> salvo il return che ho aggiunto: train loss, val loss, val psnr
@@ -772,78 +1246,11 @@ if __name__== "__main__":
         f"\nTOTAL CROSS VALIDATION TIME: "
         f"{hours:02d}h {minutes:02d}m {seconds:05.2f}s"
     )
-    # print("\nCross validation results")
-
-    # # File dove salvare tutti i risultati della CV
-    # cv_file = os.path.join(conf.output_path, f"cv_results_{job_id}.txt")
-
-    # # Estrai le best validation loss di tutti i fold 
-    # all_losses = np.array([ 
-    #     metrics["best_val_loss"] 
-    #     for metrics in cv_results.values() 
-    # ], dtype=float)
-
-    # # calcolo mean e sd
-    # mean_loss = np.mean(all_losses)
-    # std_loss = np.std(all_losses)
-
-    # # salvo tutto nel file        
-    # # stampo i risultati
-    # with open(cv_file, "w") as f:
-    #     f.write("Cross validation results\n\n")
-
-    #     for fold, metrics in cv_results.items():
-
-    #         best_val_loss = metrics["best_val_loss"]
-    #         best_epoch = metrics["best_epoch"]
-
-    #         rprint(
-    #             f"{fold}: "
-    #             f"best val_loss={best_val_loss:.5f}, "
-    #             f"epoch={best_epoch}"
-    #         )
-            
-    #         f.write( 
-    #             f"{fold}\n" 
-    #             f"best_val_loss\t{best_val_loss:.6f}\n" 
-    #             f"best_epoch\t{best_epoch}\n\n" 
-    #         )
-
-        
-        # Risultati aggregati 
-        # rprint(f"Mean best val_loss = {mean_loss:.6f}") 
-        # rprint(f"Std best val_loss = {std_loss:.6f}") 
-        # f.write("Aggregated results\n") 
-        # f.write("==================\n") 
-        # f.write(f"mean_best_val_loss\t{mean_loss:.6f}\n") 
-        # f.write(f"std_best_val_loss\t{std_loss:.6f}\n")
-
-
-
-
-#################################
-
-
-    # data_module = ICDataModule(
-    #         train_path = conf.var_train_path,
-    #         val_path = conf.var_val_path,
-    #         test_path = conf.var_test_path,
-    #         river_train_path = conf.river_train_path if conf.river_flag else None,
-    #         river_val_path = conf.river_val_path if conf.river_flag else None,
-    #         river_test_path = conf.river_test_path if conf.river_flag else None,
-    #         train_batch_size = conf.training.train_batch_size,
-    #         val_batch_size = conf.training.val_batch_size,
-    #         train_shuffle = conf.shuffle.train,
-    #         val_shuffle = conf.shuffle.val,
-    #         test_shuffle = conf.shuffle.test
-    # )
 
     n_var = data_module.get_numchannels()
-    # if n_var != conf.n_var: exit code with error message
     if n_var != conf.n_var:
         print(f"Warning: n_var in conf ({conf.n_var}) does not match number of channels in dataset ({n_var}). Using n_var = {n_var} from dataset.")
         exit(1)
-    # end if
 
     # put a timer here to check the time taken by the training
     train_dataset_name = os.path.basename(conf.var_train_path)

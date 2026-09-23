@@ -100,12 +100,19 @@ class ICDataset(Dataset):
         return len(self.ds)
 
     def __getitem__(self, idx):
-        x_sample, y_sample = self.ds[idx]
+        # La mask è il terzo tensore salvato nel .pt
+        x_sample, y_sample, mask_sample = self.ds[idx]
 
+        mask_sample = mask_sample.bool()
+
+        # Celle valide
+        valid_mask = ~mask_sample
+
+        # ==========================================================
         # INPUT
-        if self.mean_input is not None:
+        # ==========================================================
 
-            valid_mask = x_sample != 0
+        if self.mean_input is not None:
 
             x_normalized = torch.zeros_like(x_sample)
 
@@ -115,10 +122,11 @@ class ICDataset(Dataset):
 
             x_sample = x_normalized
 
+        # ==========================================================
         # TARGET
-        if self.mean_target is not None:
+        # ==========================================================
 
-            valid_mask = y_sample != 0
+        if self.mean_target is not None:
 
             y_normalized = torch.zeros_like(y_sample)
 
@@ -128,18 +136,37 @@ class ICDataset(Dataset):
 
             y_sample = y_normalized
 
-        
-        if self.resize_to_even and (x_sample.shape[-2] % 2 != 0 or x_sample.shape[-1] % 2 != 0):
+        # ==========================================================
+        # RESIZE
+        # ==========================================================
+
+        if self.resize_to_even and (
+            x_sample.shape[-2] % 2 != 0
+            or x_sample.shape[-1] % 2 != 0
+        ):
             x_sample = make_shape_even(x_sample)
             y_sample = make_shape_even(y_sample)
-        
+            mask_sample = make_shape_even(mask_sample).bool()
+
+        # ==========================================================
+        # RETURN
+        # ==========================================================
+
         if self.rivers is not None:
             river_sample = self.rivers[idx]
-            return x_sample, river_sample, y_sample
 
-        return x_sample, y_sample
+            return (
+                x_sample,
+                river_sample,
+                y_sample,
+                mask_sample
+            )
 
-
+        return (
+            x_sample,
+            y_sample,
+            mask_sample
+        )
 
 # def compute_stats_from_indices(dataset, indices):
 #     """
@@ -618,12 +645,7 @@ class ICDataModule(pl.LightningDataModule):
 
     def get_numchannels(self):
         sample = self.dataset[0]
-
-        if len(sample) == 2:
-            x, _ = sample
-        else:
-            x, _, _ = sample
-
+        x = sample[0]
         return x.shape[0]
 
 
